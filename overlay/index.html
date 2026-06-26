@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Subathon Overlay</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .overlay-wrap {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.3s, color 0.3s;
+    }
+    .overlay-label  { letter-spacing: 0.18em; text-transform: uppercase; }
+    .overlay-digits { line-height: 1; letter-spacing: 0.04em; }
+    .overlay-status { letter-spacing: 0.12em; text-transform: uppercase; }
+    .connecting     { font-family: monospace; font-size: 13px; color: rgba(255,255,255,0.4); padding: 20px; }
+  </style>
+</head>
+<body>
+
+<div id="root"><div class="connecting">connecting...</div></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// ── READ URL PARAMS ───────────────────────────────────────────────────────────
+const p = new URLSearchParams(location.search);
+
+const cfg = {
+  font        : p.get('font')        || 'Share Tech Mono',
+  digitSize   : p.get('digitSize')   || '72',
+  digitColor  : '#' + (p.get('digitColor')  || 'ffffff'),
+  lowColor    : '#' + (p.get('lowColor')    || 'e05252'),
+  pauseColor  : '#' + (p.get('pauseColor')  || 'f7b731'),
+  glowColor   : '#' + (p.get('glowColor')   || '7c6ff7'),
+  glowOpacity : p.get('glowOpacity') || '0.6',
+  labelText   : p.get('labelText')   || 'time remaining',
+  labelSize   : p.get('labelSize')   || '11',
+  labelColor  : '#' + (p.get('labelColor')  || '888888'),
+  statusSize  : p.get('statusSize')  || '11',
+  statusColor : '#' + (p.get('statusColor') || '666666'),
+  showLabel   : p.get('label')       !== '0',
+  showStatus  : p.get('status')      !== '0',
+  bgColor     : '#' + (p.get('bgColor')     || '000000'),
+  bgOpacity   : p.get('bgOpacity')   || '0.55',
+  radius      : p.get('radius')      || '14',
+  padding     : p.get('padding')     || '14',
+  transparent : p.get('transparent') === '1',
+};
+
+// ── LOAD GOOGLE FONT ──────────────────────────────────────────────────────────
+const FONT_MAP = {
+  // Monospace / Tech
+  'Share Tech Mono'    : 'Share+Tech+Mono',
+  'Orbitron'           : 'Orbitron',
+  'Russo One'          : 'Russo+One',
+  'VT323'              : 'VT323',
+  'Silkscreen'         : 'Silkscreen',
+  'Courier Prime'      : 'Courier+Prime',
+  'Space Mono'         : 'Space+Mono',
+  'Roboto Mono'        : 'Roboto+Mono:wght@600',
+  'Source Code Pro'    : 'Source+Code+Pro:wght@600',
+  'IBM Plex Mono'      : 'IBM+Plex+Mono:wght@600',
+  // Display / Bold
+  'Bebas Neue'         : 'Bebas+Neue',
+  'Rajdhani'           : 'Rajdhani:wght@600',
+  'Oswald'             : 'Oswald',
+  'Anton'              : 'Anton',
+  'Teko'               : 'Teko:wght@600',
+  'Saira Condensed'    : 'Saira+Condensed:wght@700',
+  'Exo 2'              : 'Exo+2:wght@700',
+  'Michroma'           : 'Michroma',
+  'Black Ops One'      : 'Black+Ops+One',
+  'Audiowide'          : 'Audiowide',
+  'Chakra Petch'       : 'Chakra+Petch:wght@700',
+  'Syncopate'          : 'Syncopate:wght@700',
+  'Major Mono Display' : 'Major+Mono+Display',
+  // Clean Sans
+  'Inter'              : 'Inter:wght@600',
+  'Nunito'             : 'Nunito:wght@700',
+  'Poppins'            : 'Poppins:wght@600',
+  'Montserrat'         : 'Montserrat:wght@700',
+  'Barlow'             : 'Barlow:wght@700',
+  'DM Sans'            : 'DM+Sans:wght@700',
+  'Sora'               : 'Sora:wght@700',
+  'Outfit'             : 'Outfit:wght@700',
+  'monospace'          : null,
+};
+if (cfg.font && cfg.font !== 'monospace') {
+  const known = FONT_MAP[cfg.font];
+  const encoded = (known !== undefined) ? known : cfg.font.trim().replace(/ /g, '+') + ':wght@400;700';
+  if (encoded !== null) {
+    const link = document.createElement('link');
+    link.rel  = 'stylesheet';
+    link.href = `https://fonts.googleapis.com/css2?family=${encoded}&display=swap`;
+    document.head.appendChild(link);
+  }
+}
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let totalSeconds = 0;
+let running      = false;
+const warnSeconds = 10 * 60;
+
+function pad(n) { return String(n).padStart(2, '0'); }
+function fmt(s) {
+  return `${pad(Math.floor(s/3600))}:${pad(Math.floor((s%3600)/60))}:${pad(s%60)}`;
+}
+
+// ── COMPUTE STYLES ────────────────────────────────────────────────────────────
+function bgStyle() {
+  if (cfg.transparent) return 'background:transparent;border:none;';
+  const r = parseInt(cfg.bgColor.slice(1,3),16);
+  const g = parseInt(cfg.bgColor.slice(3,5),16);
+  const b = parseInt(cfg.bgColor.slice(5,7),16);
+  return `background:rgba(${r},${g},${b},${cfg.bgOpacity});border:1px solid rgba(255,255,255,0.08);`;
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function render() {
+  const isLow   = running && totalSeconds <= warnSeconds;
+  const isPaused = !running && totalSeconds > 0;
+
+  const digitColor = isLow ? cfg.lowColor : isPaused ? cfg.pauseColor : cfg.digitColor;
+
+  const statusText = !running && totalSeconds === 0 ? 'STOPPED'
+                   : isPaused ? 'PAUSED'
+                   : isLow    ? '⚠ LOW TIME'
+                   :            'LIVE';
+
+  const gR = parseInt(cfg.glowColor.slice(1,3),16);
+  const gG = parseInt(cfg.glowColor.slice(3,5),16);
+  const gB = parseInt(cfg.glowColor.slice(5,7),16);
+  const shadow = `0 0 24px rgba(${gR},${gG},${gB},${cfg.glowOpacity})`;
+
+  document.getElementById('root').innerHTML = `
+    <div class="overlay-wrap" style="
+      ${bgStyle()}
+      border-radius:${cfg.radius}px;
+      padding:${cfg.padding}px ${cfg.padding*2}px;
+      font-family:'${cfg.font}',monospace;
+    ">
+      ${cfg.showLabel ? `
+        <div class="overlay-label" style="font-size:${cfg.labelSize}px;color:${cfg.labelColor};">
+          ${cfg.labelText}
+        </div>` : ''}
+      <div class="overlay-digits" style="
+        font-size:${cfg.digitSize}px;
+        color:${digitColor};
+        text-shadow:${shadow};
+      ">${fmt(totalSeconds)}</div>
+      ${cfg.showStatus ? `
+        <div class="overlay-status" style="font-size:${cfg.statusSize}px;color:${cfg.statusColor};">
+          ${statusText}
+        </div>` : ''}
+    </div>
+  `;
+}
+
+// ── SOCKET.IO ─────────────────────────────────────────────────────────────────
+const socket = io();
+
+socket.on('timer:sync',  d => { totalSeconds = d.totalSeconds; running = d.running; render(); });
+socket.on('timer:tick',  d => { totalSeconds = d.totalSeconds; render(); });
+socket.on('timer:start', d => { running = true;  totalSeconds = d.totalSeconds; render(); });
+socket.on('timer:pause', d => { running = false; totalSeconds = d.totalSeconds; render(); });
+socket.on('timer:reset', d => { running = false; totalSeconds = d.totalSeconds; render(); });
+socket.on('timer:add',   d => { totalSeconds = d.totalSeconds; render(); });
+socket.on('disconnect',  () => {
+  document.getElementById('root').innerHTML = '<div class="connecting">reconnecting...</div>';
+});
+
+render();
+</script>
+</body>
+</html>
