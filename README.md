@@ -1,6 +1,6 @@
 # ⏱ Subathon Timer
 
-A self-hosted subathon countdown timer with real-time donation integration and OBS overlay support — built for Indonesian streamers on **Sociabuzz**, **Trakteer**, and **Saweria**. Runs entirely on your own PC.
+A self-hosted subathon countdown timer with real-time donation integration and OBS overlay support — built for streamers with donation service **Sociabuzz**, **Trakteer**, and **Saweria** (for now). Runs entirely on your own PC.
 
 ---
 
