@@ -213,8 +213,7 @@ Copy it — this is your public webhook base URL for this session.
 
 | Platform | Webhook URL |
 |---|---|
-| Sociabuzz | `https://jungle-potato-4829.trycloudflare.com/webhook/sociabuzz` |
-| Trakteer | `https://jungle-potato-4829.trycloudflare.com/webhook/trakteer` |
+| Sociabuzz | `https://jungle-potato-4829.trycloudflare.com/webhook/sociabuzz?token=YOUR_TOKEN_HERE` |
 
 Repeat this step every stream when the URL changes.
 
@@ -232,7 +231,7 @@ This starts the server and the quick tunnel together.
 
 Best for: regular streamers. Set your webhook URLs once and never touch them again.
 
-Your domain: **subathon.subatonappricky.my.id**
+Your domain: **https://subathon.YOUR_DOMAIN_HERE**
 
 See **`CLOUDFLARE_SETUP.md`** for the complete Windows + Rumahweb walkthrough.
 
@@ -241,7 +240,7 @@ See **`CLOUDFLARE_SETUP.md`** for the complete Windows + Rumahweb walkthrough.
 2. Install `cloudflared` on Windows
 3. Run `cloudflared tunnel login`
 4. Run `cloudflared tunnel create subathon`
-5. Run `cloudflared tunnel route dns subathon subathon.subatonappricky.my.id`
+5. Run `cloudflared tunnel route dns subathon subathon.YOUR_DOMAIN_HERE`
 6. Fill in your tunnel ID and Windows username in `tunnel/config.yml`
 
 **Every stream, just run:**
@@ -249,14 +248,13 @@ See **`CLOUDFLARE_SETUP.md`** for the complete Windows + Rumahweb walkthrough.
 npm run stream
 ```
 This starts the server and tunnel together. Your URL is always
-`https://subathon.subatonappricky.my.id` — no setup needed before each stream.
+`https://subathon.YOUR_DOMAIN_HERE` — no setup needed before each stream.
 
 **Webhook URLs (permanent — set once):**
 
 | Platform | Webhook URL |
 |---|---|
-| Sociabuzz | `https://subathon.subatonappricky.my.id/webhook/sociabuzz` |
-| Trakteer | `https://subathon.subatonappricky.my.id/webhook/trakteer` |
+| Sociabuzz | `https://subathon.YOUR_DOMAIN_HERE/webhook/sociabuzz?token=YOUR_TOKEN_HERE` |
 
 ---
 
@@ -386,7 +384,7 @@ On a clean shutdown (`Ctrl+C`), the exact state is saved with zero drift.
 ### Phase 4 — Cloudflare Tunnel ✅
 - [x] `cloudflared` installed on Windows
 - [x] Tunnel created: `subathon`
-- [x] Domain: `subathon.subatonappricky.my.id`
+- [x] Domain: `subathon.YOUR_DOMAIN_HERE`
 - [x] Option A (quick random URL): `npm run tunnel:quick`
 - [x] Option B (permanent URL): `npm run tunnel` / `npm run stream`
 
