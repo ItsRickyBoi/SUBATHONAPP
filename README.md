@@ -69,11 +69,11 @@ You should see `v20.x.x` or higher.
 ### 2 — Download / clone the project
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/subathon-timer.git
+git clone https://github.com/YOUR_USERNAME/SUBATHONAPP.git
 cd subathon-timer
 ```
 
-Or download the ZIP and extract it, e.g. to `C:\subathon-timer`.
+Or download the ZIP and extract it, e.g. to `C:\SUBATHONAPP`.
 
 ---
 
