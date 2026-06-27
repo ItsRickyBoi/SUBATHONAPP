@@ -147,7 +147,7 @@ https://RANDOM.trycloudflare.com/webhook/sociabuzz
 https://RANDOM.trycloudflare.com/webhook/saweria
 ```
 
-### Option B — With domain (permanent URL) ✅ Your setup
+### Option B — With domain (permanent URL)
 
 Domain: **subathon.subatonappricky.my.id** — set once, never touch again.
 
