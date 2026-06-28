@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Donathon Timer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav>
+  <div class="logo">DONATHON TIMER</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchView('timer', this)">Timer</button>
+    <button class="nav-tab" onclick="switchView('overlay-settings', this)">Overlay Settings</button>
+    <button class="nav-tab" onclick="switchView('settings', this)">Settings</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted);font-family:var(--mono);">
+    <div id="connDot" style="width:8px;height:8px;border-radius:50%;background:var(--red);transition:background 0.3s;" title="Disconnected"></div>
+    server
+  </div>
+</nav>
+
+<!-- ── TIMER VIEW ── -->
+<div class="view active" id="view-timer">
+  <div class="timer-wrap">
+
+    <div class="timer-display" id="timerDisplay">
+      <div class="timer-label">time remaining</div>
+      <div class="timer-digits" id="timerDigits">00:00:00</div>
+      <div class="timer-status" id="timerStatus">STOPPED</div>
+    </div>
+
+    <div class="controls">
+      <button class="btn success" onclick="startTimer()">▶ Start</button>
+      <button class="btn" onclick="pauseTimer()">⏸ Pause</button>
+      <button class="btn danger" onclick="resetTimer()">↺ Reset</button>
+    </div>
+
+    <div class="add-time-row">
+      <label>Add time manually:</label>
+      <input type="number" id="manHours" value="0" min="0" max="99" placeholder="h" />
+      <span class="sep">h</span>
+      <input type="number" id="manMins" value="0" min="0" max="59" placeholder="m" />
+      <span class="sep">m</span>
+      <input type="number" id="manSecs" value="0" min="0" max="59" placeholder="s" />
+      <span class="sep">s</span>
+      <button class="btn primary" onclick="addManualTime()" style="margin-left:8px;">+ Add</button>
+    </div>
+
+    <div style="width:100%">
+      <div class="section-title">Donation log</div>
+      <div class="donation-log" id="donationLog">
+        <div class="log-empty" id="logEmpty">No donations yet — waiting for events...</div>
+      </div>
+    </div>
+
+    <div class="obs-tip">
+      📡 <span>OBS Browser Source URL:</span> <span>http://localhost:3000/overlay</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── OVERLAY SETTINGS VIEW ── -->
+<div class="view" id="view-overlay-settings">
+
+  <div class="overlay-editor">
+
+    <!-- LEFT: controls -->
+    <div class="overlay-controls">
+
+      <div class="card">
+        <div class="card-title">Timer digits</div>
+
+        <div class="field">
+          <label>Font</label>
+          <select id="ovFont" onchange="onFontSelectChange()">
+            <optgroup label="── Monospace / Tech ──">
+              <option value="Share Tech Mono">Share Tech Mono (default)</option>
+              <option value="Orbitron">Orbitron</option>
+              <option value="Russo One">Russo One</option>
+              <option value="VT323">VT323</option>
+              <option value="Silkscreen">Silkscreen</option>
+              <option value="Courier Prime">Courier Prime</option>
+              <option value="Space Mono">Space Mono</option>
+              <option value="Roboto Mono">Roboto Mono</option>
+              <option value="Source Code Pro">Source Code Pro</option>
+              <option value="IBM Plex Mono">IBM Plex Mono</option>
+            </optgroup>
+            <optgroup label="── Display / Bold ──">
+              <option value="Orbitron">Orbitron</option>
+              <option value="Bebas Neue">Bebas Neue</option>
+              <option value="Rajdhani">Rajdhani</option>
+              <option value="Oswald">Oswald</option>
+              <option value="Anton">Anton</option>
+              <option value="Teko">Teko</option>
+              <option value="Saira Condensed">Saira Condensed</option>
+              <option value="Exo 2">Exo 2</option>
+              <option value="Michroma">Michroma</option>
+              <option value="Black Ops One">Black Ops One</option>
+              <option value="Audiowide">Audiowide</option>
+              <option value="Chakra Petch">Chakra Petch</option>
+              <option value="Syncopate">Syncopate</option>
+              <option value="Major Mono Display">Major Mono Display</option>
+            </optgroup>
+            <optgroup label="── Clean Sans ──">
+              <option value="Inter">Inter</option>
+              <option value="Nunito">Nunito</option>
+              <option value="Poppins">Poppins</option>
+              <option value="Montserrat">Montserrat</option>
+              <option value="Barlow">Barlow</option>
+              <option value="DM Sans">DM Sans</option>
+              <option value="Sora">Sora</option>
+              <option value="Outfit">Outfit</option>
+            </optgroup>
+            <optgroup label="── System ──">
+              <option value="monospace">System Monospace</option>
+            </optgroup>
+            <option value="__custom__">✏ Type a font name…</option>
+          </select>
+          <input type="text" id="ovFontCustom" placeholder="e.g. Press Start 2P" style="display:none;margin-top:6px;" oninput="onFontCustomInput()" />
+          <div id="ovFontHint" style="display:none;font-size:11px;color:var(--accent);margin-top:4px;">
+            Any Google Fonts name works — <a href="https://fonts.google.com" target="_blank" style="color:var(--accent)">browse fonts.google.com</a>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Digit size — <span id="ovDigitSizeVal">72</span>px</label>
+          <input type="range" id="ovDigitSize" min="24" max="180" value="72" oninput="livePreview()" />
+        </div>
+
+        <div class="field">
+          <label>Digit color (normal)</label>
+          <div class="color-row">
+            <input type="color" id="ovDigitColor" value="#ffffff" oninput="livePreview()" />
+            <input type="text"  id="ovDigitColorHex" value="#ffffff" oninput="syncColorFromHex('ovDigitColor','ovDigitColorHex')" maxlength="7" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Digit color (low time warning)</label>
+          <div class="color-row">
+            <input type="color" id="ovLowColor" value="#e05252" oninput="livePreview()" />
+            <input type="text"  id="ovLowColorHex" value="#e05252" oninput="syncColorFromHex('ovLowColor','ovLowColorHex')" maxlength="7" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Digit color (paused)</label>
+          <div class="color-row">
+            <input type="color" id="ovPauseColor" value="#f7b731" oninput="livePreview()" />
+            <input type="text"  id="ovPauseColorHex" value="#f7b731" oninput="syncColorFromHex('ovPauseColor','ovPauseColorHex')" maxlength="7" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Text shadow / glow color</label>
+          <div class="color-row">
+            <input type="color" id="ovGlowColor" value="#7c6ff7" oninput="livePreview()" />
+            <input type="text"  id="ovGlowColorHex" value="#7c6ff7" oninput="syncColorFromHex('ovGlowColor','ovGlowColorHex')" maxlength="7" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Glow intensity — <span id="ovGlowVal">60</span>%</label>
+          <input type="range" id="ovGlow" min="0" max="100" value="60" oninput="livePreview()" />
+        </div>
+
+      </div>
+
+      <div class="card">
+        <div class="card-title">Label &amp; status text</div>
+
+        <div class="field">
+          <label>Label text (above timer)</label>
+          <input type="text" id="ovLabelText" value="time remaining" oninput="livePreview()" />
+        </div>
+
+        <div class="field">
+          <label>Label size — <span id="ovLabelSizeVal">11</span>px</label>
+          <input type="range" id="ovLabelSize" min="8" max="40" value="11" oninput="livePreview()" />
+        </div>
+
+        <div class="field">
+          <label>Label color</label>
+          <div class="color-row">
+            <input type="color" id="ovLabelColor" value="#888888" oninput="livePreview()" />
+            <input type="text"  id="ovLabelColorHex" value="#888888" oninput="syncColorFromHex('ovLabelColor','ovLabelColorHex')" maxlength="7" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Status size — <span id="ovStatusSizeVal">11</span>px</label>
+          <input type="range" id="ovStatusSize" min="8" max="40" value="11" oninput="livePreview()" />
+        </div>
+
+        <div class="field">
+          <label>Status color</label>
+          <div class="color-row">
+            <input type="color" id="ovStatusColor" value="#666666" oninput="livePreview()" />
+            <input type="text"  id="ovStatusColorHex" value="#666666" oninput="syncColorFromHex('ovStatusColor','ovStatusColorHex')" maxlength="7" />
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="toggle-row">
+            <label>Show label</label>
+            <label class="toggle"><input type="checkbox" id="ovShowLabel" checked onchange="livePreview()" /><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="toggle-row">
+            <label>Show status</label>
+            <label class="toggle"><input type="checkbox" id="ovShowStatus" checked onchange="livePreview()" /><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="card">
+        <div class="card-title">Background</div>
+
+        <div class="field">
+          <label>Background color</label>
+          <div class="color-row">
+            <input type="color" id="ovBgColor" value="#000000" oninput="livePreview()" />
+            <input type="text"  id="ovBgColorHex" value="#000000" oninput="syncColorFromHex('ovBgColor','ovBgColorHex')" maxlength="7" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Background opacity — <span id="ovBgOpacityVal">55</span>%</label>
+          <input type="range" id="ovBgOpacity" min="0" max="100" value="55" oninput="livePreview()" />
+        </div>
+
+        <div class="field">
+          <label>Border radius — <span id="ovRadiusVal">14</span>px</label>
+          <input type="range" id="ovRadius" min="0" max="60" value="14" oninput="livePreview()" />
+        </div>
+
+        <div class="field">
+          <label>Padding — <span id="ovPaddingVal">14</span>px</label>
+          <input type="range" id="ovPadding" min="0" max="60" value="14" oninput="livePreview()" />
+        </div>
+
+        <div class="field">
+          <div class="toggle-row">
+            <label>Transparent background (OBS chroma)</label>
+            <label class="toggle"><input type="checkbox" id="ovTransparent" onchange="livePreview()" /><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- RIGHT: live preview -->
+    <div class="overlay-preview-col">
+      <div class="section-title">Live preview</div>
+
+      <div class="preview-stage" id="previewStage">
+        <div id="previewWrap" class="prev-wrap">
+          <div id="previewLabel" class="prev-label">time remaining</div>
+          <div id="previewDigits" class="prev-digits">02:00:00</div>
+          <div id="previewStatus" class="prev-status">LIVE</div>
+        </div>
+      </div>
+
+      <div class="url-box">
+        <div class="section-title" style="margin-bottom:8px;">OBS Browser Source URL</div>
+        <div class="url-display" id="overlayUrl">http://localhost:3000/overlay</div>
+        <button class="btn primary" style="margin-top:10px;width:100%;" onclick="copyOverlayUrl()">Copy URL</button>
+        <div id="urlCopyMsg" style="font-size:11px;color:var(--green);opacity:0;margin-top:6px;text-align:center;transition:opacity 0.3s;font-family:var(--mono);">✓ Copied to clipboard</div>
+      </div>
+
+      <div class="save-bar" style="margin-top:16px;">
+        <span class="save-msg" id="overlaySaveMsg">✓ Overlay settings saved</span>
+        <div style="display:flex;gap:10px;margin-left:auto;">
+          <button class="btn" onclick="resetOverlaySettings()">↺ Reset defaults</button>
+          <button class="btn primary" onclick="saveOverlaySettings()">Save overlay</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── SETTINGS VIEW ── -->
+<div class="view" id="view-settings">
+
+  <div class="settings-grid">
+
+    <div class="card">
+      <div class="card-title">Timer setup</div>
+      <div class="field">
+        <label>Starting duration (hours)</label>
+        <input type="number" id="setHours" value="2" min="0" max="999" />
+      </div>
+      <div class="field">
+        <label>Starting duration (minutes)</label>
+        <input type="number" id="setMins" value="0" min="0" max="59" />
+      </div>
+      <div class="field">
+        <label>Starting duration (seconds)</label>
+        <input type="number" id="setSecs" value="0" min="0" max="59" />
+      </div>
+      <div class="field">
+        <label>Warning threshold (minutes left)</label>
+        <input type="number" id="setWarn" value="10" min="1" />
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Currency</div>
+      <div class="field">
+        <label>Default / base currency</label>
+        <select id="setCurrency">
+          <option value="IDR">IDR — Indonesian Rupiah</option>
+          <option value="USD">USD — US Dollar</option>
+          <option value="MYR">MYR — Malaysian Ringgit</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Exchange rate API key <span style="color:var(--text-muted)">(ExchangeRate-API)</span></label>
+        <input type="text" id="setApiKey" placeholder="e.g. a1b2c3d4e5f6..." />
+      </div>
+    </div>
+
+    <div class="card" style="grid-column: 1 / -1;">
+      <div class="card-title">Donation → time rules</div>
+      <div class="rules-list" id="rulesList"></div>
+      <button class="btn" style="margin-top:12px;" onclick="addRule()">+ Add rule</button>
+    </div>
+
+    <div class="card" style="grid-column: 1 / -1;">
+      <div class="card-title">Donation log appearance</div>
+
+      <div class="dl-editor">
+        <!-- LEFT: controls -->
+        <div class="dl-controls">
+
+          <div class="field">
+            <label>Donor name size — <span id="dlNameSizeVal">13</span>px</label>
+            <input type="range" id="dlNameSize" min="10" max="32" value="13" oninput="dlLivePreview()" />
+          </div>
+          <div class="field">
+            <label>Donor name color</label>
+            <div class="color-row">
+              <input type="color" id="dlNameColor" value="#e8eaf0" oninput="dlLivePreview()" />
+              <input type="text"  id="dlNameColorHex" value="#e8eaf0" oninput="syncColorFromHex('dlNameColor','dlNameColorHex')" maxlength="7" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Amount size — <span id="dlAmountSizeVal">12</span>px</label>
+            <input type="range" id="dlAmountSize" min="10" max="32" value="12" oninput="dlLivePreview()" />
+          </div>
+          <div class="field">
+            <label>Amount color</label>
+            <div class="color-row">
+              <input type="color" id="dlAmountColor" value="#7a8094" oninput="dlLivePreview()" />
+              <input type="text"  id="dlAmountColorHex" value="#7a8094" oninput="syncColorFromHex('dlAmountColor','dlAmountColorHex')" maxlength="7" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label>"Time added" size — <span id="dlAddedSizeVal">12</span>px</label>
+            <input type="range" id="dlAddedSize" min="10" max="32" value="12" oninput="dlLivePreview()" />
+          </div>
+          <div class="field">
+            <label>"Time added" color</label>
+            <div class="color-row">
+              <input type="color" id="dlAddedColor" value="#3ecf8e" oninput="dlLivePreview()" />
+              <input type="text"  id="dlAddedColorHex" value="#3ecf8e" oninput="syncColorFromHex('dlAddedColor','dlAddedColorHex')" maxlength="7" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Platform badge size — <span id="dlPlatformSizeVal">10</span>px</label>
+            <input type="range" id="dlPlatformSize" min="8" max="24" value="10" oninput="dlLivePreview()" />
+          </div>
+
+          <div class="field">
+            <label>Message size — <span id="dlMessageSizeVal">11</span>px</label>
+            <input type="range" id="dlMessageSize" min="9" max="28" value="11" oninput="dlLivePreview()" />
+          </div>
+          <div class="field">
+            <label>Message color</label>
+            <div class="color-row">
+              <input type="color" id="dlMessageColor" value="#444c61" oninput="dlLivePreview()" />
+              <input type="text"  id="dlMessageColorHex" value="#444c61" oninput="syncColorFromHex('dlMessageColor','dlMessageColorHex')" maxlength="7" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Row spacing (vertical padding) — <span id="dlRowPadVal">12</span>px</label>
+            <input type="range" id="dlRowPad" min="4" max="32" value="12" oninput="dlLivePreview()" />
+          </div>
+
+          <div class="field">
+            <label>Log panel height — <span id="dlMaxHeightVal">260</span>px</label>
+            <input type="range" id="dlMaxHeight" min="120" max="800" value="260" oninput="dlLivePreview()" />
+          </div>
+
+          <div class="field">
+            <div class="toggle-row">
+              <label>Show donor message</label>
+              <label class="toggle"><input type="checkbox" id="dlShowMessage" checked onchange="dlLivePreview()" /><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="toggle-row">
+              <label>Show timestamp</label>
+              <label class="toggle"><input type="checkbox" id="dlShowTime" checked onchange="dlLivePreview()" /><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: live preview -->
+        <div class="dl-preview-col">
+          <div class="section-title" style="margin-top:0;">Live preview</div>
+          <div class="donation-log" id="dlPreviewLog" style="max-height:none;">
+            <div class="log-item">
+              <div class="log-item-main">
+                <span class="log-platform">SOCIABUZZ</span>
+                <span class="log-name">Jessica</span>
+                <span class="log-amount">IDR 10,000</span>
+                <span class="log-added">+20m</span>
+                <span class="log-time">19:42:05</span>
+              </div>
+              <span class="log-message">"Ini hanya test notifikasi"</span>
+            </div>
+            <div class="log-item">
+              <div class="log-item-main">
+                <span class="log-platform trakteer">TRAKTEER</span>
+                <span class="log-name">Budi Santoso</span>
+                <span class="log-amount">IDR 50,000</span>
+                <span class="log-added">+10m</span>
+                <span class="log-time">19:38:51</span>
+              </div>
+              <span class="log-message">"Semangat live nya kak!"</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="save-bar" style="margin-top:16px;">
+        <span class="save-msg" id="dlSaveMsg">✓ Donation log appearance saved</span>
+        <div style="display:flex;gap:10px;margin-left:auto;">
+          <button class="btn" onclick="resetDonationLogSettings()">↺ Reset defaults</button>
+          <button class="btn primary" onclick="saveDonationLogSettings()">Save appearance</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="save-bar">
+    <span class="save-msg" id="saveMsg">✓ Settings saved</span>
+    <div style="display:flex;gap:10px;margin-left:auto;">
+      <button class="btn" onclick="loadSettings()">↺ Revert</button>
+      <button class="btn primary" onclick="saveSettings()">Save settings</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
