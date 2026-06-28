@@ -1,13 +1,13 @@
-⏱ Subathon Timer
+# ⏱ Donathon Timer
 
-A self-hosted subathon countdown timer with real-time donation integration and OBS overlay support — built for Indonesian streamers on **Sociabuzz**, **Trakteer**, and **Saweria**. Runs entirely on your own PC.
+A self-hosted donation-powered countdown timer with real-time integration and OBS overlay support — built for Indonesian streamers on **Sociabuzz**, **Trakteer**, and **Saweria**. Runs entirely on your own PC, no paid hosting needed.
 
 ---
 
 ## Project structure
 
 ```
-subathon-timer/
+donathon-timer/
 ├── public/
 │   ├── index.html            # Main timer control UI
 │   ├── style.css             # All styles
@@ -17,24 +17,20 @@ subathon-timer/
 │   └── webhooks/
 │       ├── sociabuzz.js      # ✅ Sociabuzz webhook handler
 │       ├── saweria.js        # ✅ Saweria webhook handler
-│       └── trakteer.js       # (Phase 7 — coming)
+│       └── trakteer.js       # ✅ Trakteer webhook handler
 ├── overlay/
 │   └── index.html            # OBS browser source overlay
 ├── tunnel/
 │   └── config.yml            # Cloudflare Tunnel config
 │
-├── state.json                # ← auto-generated, do not edit manually
-├── settings.json             # ← auto-generated when you click Save Settings
-├── donations.json            # ← auto-generated, donation history log
+├── state.json                # Auto-generated — timer state, do not edit
+├── settings.json             # Auto-generated — donation rules from UI
+├── donations.json            # Auto-generated — donation history
 │
-├── .env                      # Your secrets — never commit this
-├── .env.example              # Template — copy this to .env
-├── .gitignore
-├── package.json
-├── setup.bat                 # First-time setup script
-├── start.bat                 # Start with permanent Cloudflare URL
-├── start-quick.bat           # Start with random Cloudflare URL (no domain)
-├── CLOUDFLARE_SETUP.md       # Step-by-step Cloudflare + Rumahweb guide
+├── .env                      # Your secrets — never share or commit this
+├── .env.example              # Template — copy to .env and fill in
+├── setup.html                # Open in browser to generate your .env
+├── CLOUDFLARE_SETUP.md       # Step-by-step Cloudflare tunnel guide
 └── README.md
 ```
 
@@ -49,9 +45,8 @@ subathon-timer/
 | Real-time | Socket.IO |
 | State persistence | `state.json` — written every second |
 | Settings persistence | `settings.json` — written on Save |
-| Donation log | `donations.json` — written on each donation |
-| Donation platforms | Sociabuzz (Bearer token) · Saweria (HMAC-SHA256) · Trakteer (coming) |
-| Currency conversion | ExchangeRate-API — Phase 7 |
+| Donation platforms | Sociabuzz · Saweria · Trakteer |
+| Currency conversion | ExchangeRate-API — coming soon |
 | Public tunnel | Cloudflare Tunnel (`cloudflared`) |
 | OBS | Browser Source → `http://localhost:3000/overlay` |
 
@@ -63,105 +58,125 @@ subathon-timer/
 
 Download **LTS** from https://nodejs.org and run the installer with all defaults.
 
-Verify: `node --version` → should show `v20.x.x` or higher.
-
-Or just run **`setup.bat`** — it checks Node.js and cloudflared for you and runs `npm install` automatically.
+Verify:
+```
+node --version
+```
+You should see `v20.x.x` or higher.
 
 ---
 
-### 2 — Install dependencies
+### 2 — Install Cloudflare Tunnel
 
-```bash
+Download the Windows installer from:
+```
+https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+```
+Run with all defaults. Verify:
+```
+cloudflared --version
+```
+
+---
+
+### 3 — Install dependencies
+
+Open Command Prompt in the project folder and run:
+```
 npm install
 ```
 
 ---
 
-### 3 — Create your .env file
+### 4 — Create your .env file
 
-```bash
-copy .env.example .env
-```
+Open **`setup.html`** in any browser — just double-click it, no server needed.
 
-Open `.env` and fill in at minimum:
-```env
-PORT=3000
-BASE_CURRENCY=IDR
-```
+Fill in your platform keys, click **Generate .env**, download the zip, extract it, and place the `.env` file in your project folder.
 
-Add platform keys as you set them up (see donation platform sections below).
+> **What goes in .env:**
+> - `PORT` — leave as 3000
+> - `BASE_CURRENCY` — IDR, USD, or MYR
+> - `SOCIABUZZ_TOKEN` — from Sociabuzz dashboard → Integrasi → Webhook
+> - `SAWERIA_STREAM_KEY` — from your Saweria alert URL (`?streamKey=...`)
+> - `TRAKTEER_SECRET` — from Trakteer dashboard → Integrasi → Webhook
+> - `EXCHANGERATE_API_KEY` — optional, for currency conversion
 
 ---
 
-### 4 — Configure your settings
+### 5 — Configure your settings
 
-1. Run `npm start`
-2. Open http://localhost:3000
-3. Go to **Settings** tab
-4. Set your starting time, base currency (IDR), and donation rules
+1. Open Command Prompt in the project folder and run `npm start`
+2. Open **http://localhost:3000** in your browser
+3. Go to the **Settings** tab
+4. Set starting timer duration, base currency, and donation rules
 5. Click **Save settings**
 
-This writes `settings.json` to disk. The server reads it immediately — rules survive restarts and power cuts from this point on.
+This writes `settings.json` to disk. Rules survive restarts and power cuts.
 
-> **Do this before testing any webhooks.** If `settings.json` doesn't exist yet,
-> the server falls back to built-in default rules which may not match what you want.
+> **Do this before testing webhooks.** If `settings.json` doesn't exist yet,
+> the server falls back to built-in defaults which may not match what you want.
 
 ---
 
-### 5 — Add the OBS Browser Source
+### 6 — Add OBS Browser Source
 
 1. Open OBS → your scene → **+** under Sources → **Browser**
 2. URL: `http://localhost:3000/overlay`
-3. Width: `500` Height: `160`
+3. Width: `500` · Height: `160`
 4. Check **"Shutdown source when not visible"**
 5. Check **"Refresh browser when scene becomes active"**
 
-> **Customize the overlay:** Go to **Overlay Settings** tab → adjust fonts, colors,
-> sizes, glow, background → **Save overlay** → **Copy URL** → paste into OBS.
-> All settings are baked into the URL so OBS always loads your exact look.
+> **Customize the overlay:** Go to the **Overlay Settings** tab → adjust fonts,
+> colors, sizes, glow, background → click **Save overlay** → **Copy URL** →
+> paste that URL into OBS. All settings are baked into the URL.
 
-> **Running OBS on a different PC?** Use that machine's local IP instead of
-> `localhost`: `http://192.168.1.X:3000/overlay`. Run `ipconfig` on the server
-> machine to find its IP.
+> **OBS on a different PC?** Use the server machine's local IP instead of
+> `localhost`: `http://192.168.1.X:3000/overlay`
+> Run `ipconfig` on the server machine to find its IP.
 
 ---
 
 ## 🌐 Cloudflare Tunnel
 
 The tunnel gives donation platforms a public HTTPS URL to send webhooks to.
-See **`CLOUDFLARE_SETUP.md`** for the full Windows + Rumahweb walkthrough.
+See **`CLOUDFLARE_SETUP.md`** for the full step-by-step guide.
 
-### Option A — No domain (random URL, free)
+### Option A — No domain (random URL)
 
-URL changes every restart. Update webhook URLs in each platform before each stream.
+Free, no domain needed. URL changes every restart — update webhook URLs in
+each platform before every stream.
 
 ```bash
-start-quick.bat       # Windows — starts server + tunnel together
-# or
 npm run stream:quick
 ```
 
-Webhook URLs (update before each stream):
+Webhook URLs (update each stream):
 ```
-https://RANDOM.trycloudflare.com/webhook/sociabuzz
-https://RANDOM.trycloudflare.com/webhook/saweria
+https://random-name.trycloudflare.com/webhook/sociabuzz
+https://random-name.trycloudflare.com/webhook/saweria
+https://random-name.trycloudflare.com/webhook/trakteer
 ```
 
-### Option B — With domain (permanent URL)
+---
 
-Domain: **subathon.subatonappricky.my.id** — set once, never touch again.
+### Option B — With your own domain (permanent URL) ✅ Recommended
+
+Set webhook URLs once, never touch them again.
+A `.my.id` domain costs around Rp 30,000–50,000/year.
 
 ```bash
-start.bat       # Windows — starts server + tunnel together
-# or
 npm run stream
 ```
 
-Permanent webhook URLs:
+Webhook URLs (permanent):
 ```
-https://subathon.subatonappricky.my.id/webhook/sociabuzz
-https://subathon.subatonappricky.my.id/webhook/saweria
+https://subathon.yourdomain.com/webhook/sociabuzz
+https://subathon.yourdomain.com/webhook/saweria
+https://subathon.yourdomain.com/webhook/trakteer
 ```
+
+Follow **`CLOUDFLARE_SETUP.md`** for one-time setup with your registrar.
 
 ---
 
@@ -169,79 +184,78 @@ https://subathon.subatonappricky.my.id/webhook/saweria
 
 ### Sociabuzz ✅
 
-**How it works:** Sociabuzz sends a Bearer token in every request header.
-Your server checks it matches `SOCIABUZZ_TOKEN` in `.env`. Mismatched requests are rejected.
+**Auth method:** Bearer token in `Authorization` header.
 
 **Setup:**
 1. Sociabuzz dashboard → **Integrasi** → **Webhook**
-2. **Webhook URL**: `https://subathon.subatonappricky.my.id/webhook/sociabuzz`
-3. Copy the **Webhook Token** → `.env` → `SOCIABUZZ_TOKEN=paste_here`
-4. Restart server
-5. Click **Webhook HTTP Test** — terminal should show:
-   ```
-   [sociabuzz] donation from Jessica — IDR 10.000
-   [donation] sociabuzz | Jessica | IDR 10000 | total +Xs
-   ```
+2. **Webhook URL**: `https://yourdomain.com/webhook/sociabuzz`
+3. Copy **Webhook Token** → `.env` → `SOCIABUZZ_TOKEN=`
+4. Restart server → click **Webhook HTTP Test**
 
-**Payload fields used:**
-- `supporter` — donor name
-- `amount` — donation amount (IDR)
-- `message` — donor message
-- `status` — must be `SUCCESS` to process
+Terminal should show:
+```
+[sociabuzz] donation from Jessica — IDR 10.000
+[donation] sociabuzz | Jessica | IDR 10000 | total +Xs
+```
 
 ---
 
 ### Saweria ✅
 
-**How it works:** Saweria signs every request using HMAC-SHA256. The signature
-is computed from specific payload fields joined together, using your Stream Key.
-No separate secret needed — the Stream Key from your alert URL is the signing key.
+**Auth method:** HMAC-SHA256 signature using your Stream Key.
 
-**Signature method** (from https://saweria.co/docs/webhook):
-```
-msg       = version + id + amount_raw + donator_name + donator_email
-signature = HMAC-SHA256(key=streamKey, msg=msg)
-```
+The signature is computed from: `version + id + amount_raw + donator_name + donator_email`
 
-**Where to find your Stream Key:**
-Go to your Saweria alert URL — it looks like:
+**Where to find your Stream Key:** it's in your Saweria alert URL:
 ```
-https://saweria.co/widgets/alert?streamKey=9c21dbd5c0228152a39428076793dd04
+saweria.co/widgets/alert?streamKey=YOUR_KEY_HERE
 ```
-The value after `streamKey=` is your key.
 
 **Setup:**
-1. Copy your Stream Key from the alert URL
-2. `.env` → `SAWERIA_STREAM_KEY=your_stream_key_here`
-3. Saweria dashboard → **Integrasi** → **HTTP Webhook**
-4. **Webhook URL**: `https://subathon.subatonappricky.my.id/webhook/saweria`
-5. Restart server
-6. Click **Munculkan Notifikasi** — terminal should show:
-   ```
-   [saweria] raw payload: { ... }
-   [saweria] donation from Someguy — IDR 69.420
-   [donation] saweria | Someguy | IDR 69420 | total +Xs
-   ```
+1. Copy Stream Key from alert URL → `.env` → `SAWERIA_STREAM_KEY=`
+2. Saweria dashboard → **Integrasi** → **HTTP Webhook**
+3. **Webhook URL**: `https://yourdomain.com/webhook/saweria`
+4. Restart server → click **Munculkan Notifikasi**
 
-**Payload fields used:**
-- `donator_name` — donor name
-- `amount_raw` — donation amount in IDR (before platform cut)
-- `message` — donor message
-- `type` — must be `donation` to process
+Terminal should show:
+```
+[saweria] donation from Someguy — IDR 69.420
+[donation] saweria | Someguy | IDR 69420 | total +Xs
+```
 
 ---
 
-### Trakteer
-*(Phase 7 — coming next)*
+### Trakteer ✅
+
+**Auth method:** Token in `X-Webhook-Token` header — just the plain URL, no token in the URL itself.
+
+**Setup:**
+1. Trakteer dashboard → **Integrasi** → **Webhook**
+2. **Webhook URL**: `https://yourdomain.com/webhook/trakteer`
+3. Copy the token shown → `.env` → `TRAKTEER_SECRET=`
+4. Toggle webhook **on** → restart server → click **Send Webhook Test**
+
+Terminal should show:
+```
+[trakteer] donation from Egis — IDR 5.000 (1× Kopi @ IDR 5000)
+[donation] trakteer | Egis | IDR 5000 | total +Xs
+```
+
+> **Note:** Trakteer's test button sends a payload with JS-style comments which
+> makes it invalid JSON. The handler strips these automatically so the test works.
+> Real donations don't have this issue.
+
+> **Important:** Trakteer retries failed webhooks 3 times, then **automatically
+> disables** your webhook. Always make sure your server is running before testing.
 
 ---
 
 ## 🧮 How donation rules work
 
-Configure rules in the **Settings** tab → saved to `settings.json`.
+Configure in the **Settings** tab → saved to `settings.json`.
 
-The server uses **tiered calculation** — walks rules highest → lowest, takes full
-multiples at each tier, passes remainder down.
+Tiered calculation: walks rules highest → lowest, takes full multiples at each
+tier, passes remainder down.
 
 **Example rules:**
 ```
@@ -250,15 +264,13 @@ IDR 10,000 = +2 minutes
 IDR 50,000 = +10 minutes
 ```
 
-**Example donations:**
-
 | Donation | Calculation | Time added |
 |---|---|---|
-| IDR 10,000 | 10k × 1 = +2min | **+2 min** |
-| IDR 50,000 | 50k × 1 = +10min | **+10 min** |
-| IDR 60,000 | 50k × 1 = +10min, 10k × 1 = +2min | **+12 min** |
-| IDR 35,000 | 10k × 3 = +6min, 5k × 1 = +1min | **+7 min** |
-| IDR 7,000 | 5k × 1 = +1min, rem 2k ignored | **+1 min** |
+| IDR 10,000 | 10k × 1 | **+2 min** |
+| IDR 50,000 | 50k × 1 | **+10 min** |
+| IDR 60,000 | 50k × 1, then 10k × 1 | **+12 min** |
+| IDR 35,000 | 10k × 3, then 5k × 1 | **+7 min** |
+| IDR 7,000 | 5k × 1, rem 2k ignored | **+1 min** |
 | IDR 4,000 | Below all thresholds | **+0** |
 
 ---
@@ -266,7 +278,7 @@ IDR 50,000 = +10 minutes
 ## ⚡ Power cut / crash recovery
 
 `state.json` is written every second while running, and immediately on every
-pause, reset, and time-add.
+pause, reset, and donation received.
 
 On restart after a power cut:
 ```
@@ -274,23 +286,21 @@ On restart after a power cut:
 ⚡  Power-cut drift: -47s applied
 ```
 
-The server calculates how long power was out and subtracts that from remaining
-time. Timer always restores as **PAUSED** — you click Start to resume.
-
-On a clean `Ctrl+C` shutdown, exact state is saved with zero drift.
+Timer always restores as **PAUSED** — click Start when ready.
+On a clean Ctrl+C shutdown, exact state is saved with zero drift.
 
 ---
 
-## npm scripts reference
+## npm scripts
 
 | Command | What it does |
 |---|---|
 | `npm start` | Start the server only |
 | `npm run dev` | Start with auto-restart on file saves |
-| `npm run tunnel` | Start Cloudflare Tunnel (permanent URL, Option B) |
-| `npm run tunnel:quick` | Start tunnel with random URL (Option A) |
-| `npm run stream` | Server + permanent tunnel (Option B) |
-| `npm run stream:quick` | Server + quick tunnel (Option A) |
+| `npm run tunnel` | Start Cloudflare Tunnel (permanent URL) |
+| `npm run tunnel:quick` | Start tunnel with random URL |
+| `npm run stream` | Server + permanent tunnel together |
+| `npm run stream:quick` | Server + quick tunnel together |
 
 ---
 
@@ -309,49 +319,49 @@ On a clean `Ctrl+C` shutdown, exact state is saved with zero drift.
 - [x] Server-side timer state (survives browser close)
 - [x] `state.json` — written every second, power-cut safe
 - [x] `settings.json` — written on Save, rules survive restarts
-- [x] `donations.json` — persistent donation history (max 500 entries)
+- [x] `donations.json` — persistent donation history
 - [x] Graceful shutdown on Ctrl+C
 - [x] Settings sync endpoint (`POST /api/settings`)
 
 ### Phase 3 — Overlay customization ✅
-- [x] 30+ Google Fonts + custom font input (any Google Font name)
-- [x] Color pickers: digits, low-time, paused, glow, label, status, background
-- [x] Sliders: digit size, label size, status size, glow intensity,
-      background opacity, border radius, padding
+- [x] 30+ Google Fonts + custom font input
+- [x] Full color control (digits, low, paused, glow, label, status, background)
+- [x] Size, padding, radius, opacity sliders
 - [x] Transparent background toggle
 - [x] Live preview with checkered stage
-- [x] Auto-generated OBS URL with all settings as URL params
+- [x] Auto-generated OBS URL with all settings as params
 
 ### Phase 4 — Cloudflare Tunnel ✅
-- [x] `cloudflared` installed on Windows
-- [x] Tunnel created: `subathon`
-- [x] Permanent domain: `subathon.subatonappricky.my.id`
-- [x] Option A (quick): `npm run tunnel:quick` / `start-quick.bat`
-- [x] Option B (permanent): `npm run tunnel` / `start.bat`
+- [x] Option A — random URL (`npm run stream:quick`)
+- [x] Option B — permanent domain (`npm run stream`)
+- [x] `CLOUDFLARE_SETUP.md` with full walkthrough
 
 ### Phase 5 — Sociabuzz ✅
-- [x] Webhook handler at `POST /webhook/sociabuzz`
-- [x] Bearer token verification (constant-time compare)
-- [x] Correct field mapping (`supporter` for name)
+- [x] Bearer token verification
 - [x] Tiered donation-to-time calculation
-- [x] Donor message shown in log
-- [x] Tested with HTTP Test button ✓
+- [x] Donor name, amount, message in log
 
 ### Phase 6 — Saweria ✅
-- [x] Webhook handler at `POST /webhook/saweria`
 - [x] HMAC-SHA256 signature verification
-- [x] Correct signing method: `HMAC(streamKey, version+id+amount_raw+donator_name+donator_email)`
-- [x] Stream Key sourced from alert URL (`?streamKey=...`)
-- [x] Tested with Munculkan Notifikasi button ✓
+- [x] Signing: `HMAC(streamKey, version+id+amount_raw+donator_name+donator_email)`
+- [x] Stream Key from alert URL
 
-### Phase 7 — Trakteer
-- [ ] Webhook handler + signature verification
-- [ ] Wire into `processDonation()`
-- [ ] Test with Trakteer test button
+### Phase 7 — Trakteer ✅
+- [x] `X-Webhook-Token` header verification
+- [x] Comment stripping for test payload compatibility
+- [x] `price × quantity` for correct total calculation
+- [x] Always returns 200 to prevent auto-disable
 
-### Phase 8 — Currency conversion
+### Phase 8 — Setup experience ✅
+- [x] `setup.html` — browser-based .env generator, no server needed
+
+### Phase 9 — Currency conversion
 - [ ] ExchangeRate-API integration
 - [ ] Hourly rate cache
-- [ ] Convert incoming currency to base (IDR) before rule matching
+- [ ] Convert incoming currency to IDR before rule matching
 
 ---
+
+## License
+
+MIT
