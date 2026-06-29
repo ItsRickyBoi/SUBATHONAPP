@@ -14,6 +14,7 @@ donathon-timer/
 │   └── app.js                # Timer logic, overlay settings, Socket.IO client
 ├── server/
 │   ├── index.js              # Express + Socket.IO server
+│   ├── currency.js           # Exchange rate cache + conversion (ExchangeRate-API)
 │   └── webhooks/
 │       ├── sociabuzz.js      # ✅ Sociabuzz webhook handler
 │       ├── saweria.js        # ✅ Saweria webhook handler
@@ -21,11 +22,12 @@ donathon-timer/
 ├── overlay/
 │   └── index.html            # OBS browser source overlay
 ├── tunnel/
-│   └── config.yml            # Cloudflare Tunnel config
+│   ├── config.yml            # Cloudflare Tunnel config (fill in your tunnel ID)
+│   └── config-example.yml    # Reference copy — do not edit
 │
 ├── state.json                # Auto-generated — timer state, do not edit
 ├── settings.json             # Auto-generated — donation rules from UI
-├── donations.json            # Auto-generated — donation history
+├── donations.json            # Auto-generated — persistent donation history
 │
 ├── .env                      # Your secrets — never share or commit this
 ├── .env.example              # Template — copy to .env and fill in
@@ -45,8 +47,9 @@ donathon-timer/
 | Real-time | Socket.IO |
 | State persistence | `state.json` — written every second |
 | Settings persistence | `settings.json` — written on Save |
+| Donation history | `donations.json` — persistent, survives refresh |
 | Donation platforms | Sociabuzz · Saweria · Trakteer |
-| Currency conversion | ExchangeRate-API — coming soon |
+| Currency conversion | ExchangeRate-API (hourly cache) |
 | Public tunnel | Cloudflare Tunnel (`cloudflared`) |
 | OBS | Browser Source → `http://localhost:3000/overlay` |
 
@@ -94,13 +97,16 @@ Open **`setup.html`** in any browser — just double-click it, no server needed.
 
 Fill in your platform keys, click **Generate .env**, download the zip, extract it, and place the `.env` file in your project folder.
 
-> **What goes in .env:**
-> - `PORT` — leave as 3000
-> - `BASE_CURRENCY` — IDR, USD, or MYR
-> - `SOCIABUZZ_TOKEN` — from Sociabuzz dashboard → Integrasi → Webhook
-> - `SAWERIA_STREAM_KEY` — from your Saweria alert URL (`?streamKey=...`)
-> - `TRAKTEER_SECRET` — from Trakteer dashboard → Integrasi → Webhook
-> - `EXCHANGERATE_API_KEY` — optional, for currency conversion
+What goes in `.env`:
+
+| Key | Where to find it |
+|---|---|
+| `PORT` | Leave as `3000` |
+| `BASE_CURRENCY` | `IDR`, `USD`, or `MYR` |
+| `SOCIABUZZ_TOKEN` | Sociabuzz dashboard → Integrasi → Webhook |
+| `SAWERIA_STREAM_KEY` | Your Saweria alert URL: `?streamKey=...` |
+| `TRAKTEER_SECRET` | Trakteer dashboard → Integrasi → Webhook |
+| `EXCHANGERATE_API_KEY` | https://www.exchangerate-api.com (free tier) |
 
 ---
 
@@ -114,8 +120,7 @@ Fill in your platform keys, click **Generate .env**, download the zip, extract i
 
 This writes `settings.json` to disk. Rules survive restarts and power cuts.
 
-> **Do this before testing webhooks.** If `settings.json` doesn't exist yet,
-> the server falls back to built-in defaults which may not match what you want.
+> **Do this before testing webhooks.** If `settings.json` doesn't exist yet, the server falls back to built-in defaults which may not match what you want.
 
 ---
 
@@ -127,25 +132,19 @@ This writes `settings.json` to disk. Rules survive restarts and power cuts.
 4. Check **"Shutdown source when not visible"**
 5. Check **"Refresh browser when scene becomes active"**
 
-> **Customize the overlay:** Go to the **Overlay Settings** tab → adjust fonts,
-> colors, sizes, glow, background → click **Save overlay** → **Copy URL** →
-> paste that URL into OBS. All settings are baked into the URL.
+> **Customize the overlay:** Go to the **Overlay Settings** tab → adjust fonts, colors, sizes, glow, background → click **Save overlay** → **Copy URL** → paste that URL into OBS. All settings are baked into the URL.
 
-> **OBS on a different PC?** Use the server machine's local IP instead of
-> `localhost`: `http://192.168.1.X:3000/overlay`
-> Run `ipconfig` on the server machine to find its IP.
+> **OBS on a different PC?** Use the server machine's local IP instead of `localhost`: `http://192.168.1.X:3000/overlay`. Run `ipconfig` on the server machine to find its IP.
 
 ---
 
 ## 🌐 Cloudflare Tunnel
 
-The tunnel gives donation platforms a public HTTPS URL to send webhooks to.
-See **`CLOUDFLARE_SETUP.md`** for the full step-by-step guide.
+The tunnel gives donation platforms a public HTTPS URL to send webhooks to. See **`CLOUDFLARE_SETUP.md`** for the full step-by-step guide.
 
 ### Option A — No domain (random URL)
 
-Free, no domain needed. URL changes every restart — update webhook URLs in
-each platform before every stream.
+Free, no domain needed. URL changes every restart — update webhook URLs in each platform before every stream.
 
 ```bash
 npm run stream:quick
@@ -162,8 +161,7 @@ https://random-name.trycloudflare.com/webhook/trakteer
 
 ### Option B — With your own domain (permanent URL) ✅ Recommended
 
-Set webhook URLs once, never touch them again.
-A `.my.id` domain costs around Rp 30,000–50,000/year.
+Set webhook URLs once, never touch them again. A `.my.id` domain costs around Rp 30,000–50,000/year.
 
 ```bash
 npm run stream
@@ -186,7 +184,6 @@ Follow **`CLOUDFLARE_SETUP.md`** for one-time setup with your registrar.
 
 **Auth method:** Bearer token in `Authorization` header.
 
-**Setup:**
 1. Sociabuzz dashboard → **Integrasi** → **Webhook**
 2. **Webhook URL**: `https://yourdomain.com/webhook/sociabuzz`
 3. Copy **Webhook Token** → `.env` → `SOCIABUZZ_TOKEN=`
@@ -211,7 +208,6 @@ The signature is computed from: `version + id + amount_raw + donator_name + dona
 saweria.co/widgets/alert?streamKey=YOUR_KEY_HERE
 ```
 
-**Setup:**
 1. Copy Stream Key from alert URL → `.env` → `SAWERIA_STREAM_KEY=`
 2. Saweria dashboard → **Integrasi** → **HTTP Webhook**
 3. **Webhook URL**: `https://yourdomain.com/webhook/saweria`
@@ -227,9 +223,8 @@ Terminal should show:
 
 ### Trakteer ✅
 
-**Auth method:** Token in `X-Webhook-Token` header — just the plain URL, no token in the URL itself.
+**Auth method:** Token in `X-Webhook-Token` header.
 
-**Setup:**
 1. Trakteer dashboard → **Integrasi** → **Webhook**
 2. **Webhook URL**: `https://yourdomain.com/webhook/trakteer`
 3. Copy the token shown → `.env` → `TRAKTEER_SECRET=`
@@ -241,12 +236,24 @@ Terminal should show:
 [donation] trakteer | Egis | IDR 5000 | total +Xs
 ```
 
-> **Note:** Trakteer's test button sends a payload with JS-style comments which
-> makes it invalid JSON. The handler strips these automatically so the test works.
-> Real donations don't have this issue.
+> **Note:** Trakteer's test button sends a payload with JS-style comments which makes it invalid JSON. The handler strips these automatically so the test works. Real donations don't have this issue.
 
-> **Important:** Trakteer retries failed webhooks 3 times, then **automatically
-> disables** your webhook. Always make sure your server is running before testing.
+> **Important:** Trakteer retries failed webhooks 3 times, then **automatically disables** your webhook. Always make sure your server is running before testing.
+
+---
+
+## 💱 Currency conversion
+
+When a donation arrives in a currency different from your `BASE_CURRENCY`, the server automatically converts it before applying your donation rules.
+
+**Setup:** Add your free API key from https://www.exchangerate-api.com to `.env`:
+```
+EXCHANGERATE_API_KEY=your_key_here
+```
+
+Rates are fetched once on server start and cached for 1 hour. If the key is missing, the server falls back to the raw donation amount and logs a warning.
+
+The donation log shows both the original amount and the converted amount (e.g. `USD 5 → ≈ IDR 89,545`). You can customize the appearance of the converted amount — size, color, and visibility — in the **Settings** tab under **Donation log appearance**.
 
 ---
 
@@ -254,8 +261,7 @@ Terminal should show:
 
 Configure in the **Settings** tab → saved to `settings.json`.
 
-Tiered calculation: walks rules highest → lowest, takes full multiples at each
-tier, passes remainder down.
+Tiered calculation: walks rules highest → lowest, takes full multiples at each tier, passes remainder down.
 
 **Example rules:**
 ```
@@ -275,10 +281,19 @@ IDR 50,000 = +10 minutes
 
 ---
 
+## 📋 Donation log
+
+The donation log persists across page refreshes — it's saved to `donations.json` on the server and loaded automatically when you open the control UI. The log keeps the last 500 donations; older entries are trimmed automatically.
+
+Each entry shows: platform badge, donor name, original amount, converted amount (if applicable), time added, and timestamp.
+
+All appearance options — font sizes, colors, row spacing, log height, and which fields to show — are configurable in the **Settings** tab under **Donation log appearance**.
+
+---
+
 ## ⚡ Power cut / crash recovery
 
-`state.json` is written every second while running, and immediately on every
-pause, reset, and donation received.
+`state.json` is written every second while running, and immediately on every pause, reset, and donation received.
 
 On restart after a power cut:
 ```
@@ -286,8 +301,7 @@ On restart after a power cut:
 ⚡  Power-cut drift: -47s applied
 ```
 
-Timer always restores as **PAUSED** — click Start when ready.
-On a clean Ctrl+C shutdown, exact state is saved with zero drift.
+Timer always restores as **PAUSED** — click Start when ready. On a clean Ctrl+C shutdown, exact state is saved with zero drift.
 
 ---
 
@@ -319,7 +333,7 @@ On a clean Ctrl+C shutdown, exact state is saved with zero drift.
 - [x] Server-side timer state (survives browser close)
 - [x] `state.json` — written every second, power-cut safe
 - [x] `settings.json` — written on Save, rules survive restarts
-- [x] `donations.json` — persistent donation history
+- [x] `donations.json` — persistent donation history, loaded on page open
 - [x] Graceful shutdown on Ctrl+C
 - [x] Settings sync endpoint (`POST /api/settings`)
 
@@ -355,12 +369,21 @@ On a clean Ctrl+C shutdown, exact state is saved with zero drift.
 ### Phase 8 — Setup experience ✅
 - [x] `setup.html` — browser-based .env generator, no server needed
 
-### Phase 9 — Currency conversion
-- [ ] ExchangeRate-API integration
-- [ ] Hourly rate cache
-- [ ] Convert incoming currency to IDR before rule matching
+### Phase 9 — Currency conversion ✅
+- [x] ExchangeRate-API integration (`server/currency.js`)
+- [x] Hourly rate cache, pre-warmed on server start
+- [x] Converts incoming currency to base currency before rule matching
+- [x] Falls back to raw amount if API key missing or request fails
+- [x] `/api/rates` endpoint exposes current cached rates
+
+### Phase 10 — Donation log persistence ✅
+- [x] `donations.json` written on every donation (capped at 500 entries)
+- [x] History loaded via `GET /api/donations` on page open
+- [x] Converted amount shown alongside original in log
+- [x] Converted amount appearance (size, color, visibility) configurable in Settings
 
 ---
+
 
 ## License
 
