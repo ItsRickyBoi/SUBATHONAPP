@@ -1,0 +1,15 @@
+# ── tunnel/config.yml ─────────────────────────────────────────────────────────
+# Cloudflare Tunnel config for Subathon Timer
+# Replace YOUR_TUNNEL_ID and your domain before running.
+# Run: cloudflared tunnel --config tunnel/config.yml run
+# -----------------------------------------------------------------------------
+
+tunnel: YOUR_TUNNEL_ID
+credentials-file: C:\Users\YOUR-PC-NAME\.cloudflared\YOUR-TUNNEL-FILE.json
+
+ingress:
+  # Main route — all traffic to your domain goes to the local server
+  - hostname: subathon.YOUR_DOMAIN_HERE
+    service: http://localhost:3000
+  # Catch-all required by cloudflared — do not remove
+  - service: http_status:404
