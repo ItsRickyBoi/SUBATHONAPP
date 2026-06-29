@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Donathon Timer — Setup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:            #0d0f14;
+      --bg-panel:      #13161e;
+      --bg-card:       #1a1e28;
+      --border:        rgba(255,255,255,0.07);
+      --border-bright: rgba(255,255,255,0.15);
+      --accent:        #7c6ff7;
+      --accent-dim:    rgba(124,111,247,0.12);
+      --green:         #3ecf8e;
+      --green-dim:     rgba(62,207,142,0.10);
+      --amber:         #f7b731;
+      --red:           #e05252;
+      --text:          #e8eaf0;
+      --text-dim:      #7a8094;
+      --text-muted:    #444c61;
+      --mono:          'Share Tech Mono', monospace;
+      --sans:          'Inter', sans-serif;
+      --radius:        12px;
+      --radius-sm:     8px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px 80px;
+    }
+
+    .logo {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent);
+      letter-spacing: 0.18em;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-dim);
+      text-align: center;
+      line-height: 1.6;
+      max-width: 440px;
+      margin-bottom: 36px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 560px;
+      background: var(--bg-panel);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    .section {
+      padding: 20px 24px;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .section-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .section-icon {
+      width: 28px; height: 28px;
+      background: var(--accent-dim);
+      border: 0.5px solid var(--accent);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .section-title { font-size: 13px; font-weight: 600; }
+    .section-desc  { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+    .fields { display: flex; flex-direction: column; gap: 14px; }
+
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label {
+      font-size: 12px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .tag {
+      font-size: 10px;
+      padding: 1px 7px;
+      border-radius: 4px;
+      font-family: var(--mono);
+      letter-spacing: 0.04em;
+    }
+    .tag-optional { background: rgba(255,255,255,0.05); color: var(--text-muted); }
+    .tag-required { background: var(--accent-dim); color: var(--accent); }
+
+    .field input, .field select {
+      background: var(--bg-card);
+      border: 0.5px solid var(--border-bright);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 13px;
+      padding: 9px 12px;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+    .field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
+    .field input::placeholder { color: var(--text-muted); }
+    .field select option { background: var(--bg-card); }
+
+    .hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+    .hint code { font-family: var(--mono); color: var(--accent); font-size: 10px; }
+    .hint a    { color: var(--accent); text-decoration: none; }
+    .hint a:hover { text-decoration: underline; }
+
+    .field-row { display: flex; gap: 10px; align-items: flex-end; }
+    .field-row .field { flex: 1; }
+
+    .notice {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      background: rgba(247,183,49,0.07);
+      border: 0.5px solid rgba(247,183,49,0.25);
+      border-radius: var(--radius-sm);
+      padding: 11px 13px;
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.55;
+      margin-top: 2px;
+    }
+    .notice-icon { flex-shrink: 0; font-size: 13px; margin-top: 1px; }
+
+    .footer {
+      padding: 18px 24px;
+      border-top: 0.5px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .footer-note { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    .btn {
+      padding: 10px 22px;
+      border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 500;
+      cursor: pointer;
+      border: 0.5px solid var(--border-bright);
+      background: var(--bg-card);
+      color: var(--text);
+      font-family: var(--sans);
+      transition: all 0.15s;
+      display: inline-flex; align-items: center; gap: 6px;
+      white-space: nowrap;
+    }
+    .btn:hover  { background: rgba(255,255,255,0.05); }
+    .btn:active { transform: scale(0.97); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn.primary:hover { opacity: 0.88; }
+
+    /* ── RESULT ── */
+    .result { display: none; margin-top: 20px; width: 100%; max-width: 560px; }
+    .result.show { display: flex; flex-direction: column; gap: 12px; }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--green);
+      font-family: var(--mono);
+      letter-spacing: 0.04em;
+    }
+    .result-header::before {
+      content: '';
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      flex-shrink: 0;
+    }
+
+    .preview-box {
+      background: var(--bg-card);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1.9;
+      white-space: pre;
+      overflow-x: auto;
+    }
+    .preview-box .k     { color: var(--accent); }
+    .preview-box .v     { color: var(--green); }
+    .preview-box .empty { color: var(--text-muted); font-style: italic; }
+
+    .dl-btn {
+      width: 100%;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: opacity 0.15s;
+    }
+    .dl-btn:hover  { opacity: 0.88; }
+    .dl-btn:active { transform: scale(0.98); }
+
+    .next-steps {
+      background: var(--bg-panel);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .next-steps-title {
+      padding: 12px 16px;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-family: var(--mono);
+      border-bottom: 0.5px solid var(--border);
+    }
+    .next-step {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 11px 16px;
+      border-bottom: 0.5px solid var(--border);
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.55;
+    }
+    .next-step:last-child { border-bottom: none; }
+    .ns-num {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border-radius: 4px;
+      padding: 2px 6px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .next-step strong { color: var(--text); font-weight: 500; }
+  </style>
+</head>
+<body>
+
+<div class="logo">⏱ DONATHON TIMER</div>
+<h1>Environment Setup</h1>
+<p class="subtitle">Fill in your keys and download the <code style="font-family:var(--mono);color:var(--accent);font-size:13px;">.env</code> file. Place it in your project folder and you're ready to go.</p>
+
+<div class="card">
+
+  <!-- SERVER -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-icon">⚙️</div>
+      <div>
+        <div class="section-title">Server</div>
+        <div class="section-desc">Basic app configuration</div>
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field-row">
+        <div class="field">
+          <label>Port <span class="tag tag-required">required</span></label>
+          <input type="number" id="port" value="3000" min="1024" max="65535" />
+        </div>
+        <div class="field">
+          <label>Base currency <span class="tag tag-required">required</span></label>
+          <select id="currency">
+            <option value="IDR" selected>IDR — Indonesian Rupiah</option>
+            <option value="USD">USD — US Dollar</option>
+            <option value="MYR">MYR — Malaysian Ringgit</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXCHANGERATE -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-icon">💱</div>
+      <div>
+        <div class="section-title">Currency conversion</div>
+        <div class="section-desc">Only needed if you receive donations in foreign currencies</div>
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field">
+        <label>ExchangeRate API key <span class="tag tag-optional">optional</span></label>
+        <input type="text" id="exchangeKey" placeholder="e.g. a1b2c3d4e5f6abc..." />
+        <span class="hint">Free key at <a href="https://www.exchangerate-api.com" target="_blank">exchangerate-api.com</a> — free tier is 1,500 requests/month, more than enough.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOCIABUZZ -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-icon">💜</div>
+      <div>
+        <div class="section-title">Sociabuzz</div>
+        <div class="section-desc">Leave blank if you don't use Sociabuzz</div>
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field">
+        <label>Webhook Token <span class="tag tag-optional">optional</span></label>
+        <input type="text" id="sociabuzzToken" placeholder="Paste token here..." />
+        <span class="hint">Sociabuzz dashboard → <strong style="color:var(--text)">Integrasi</strong> → <strong style="color:var(--text)">Webhook</strong> → copy the <strong style="color:var(--text)">Webhook Token</strong> field.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAWERIA -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-icon">🪚</div>
+      <div>
+        <div class="section-title">Saweria</div>
+        <div class="section-desc">Leave blank if you don't use Saweria</div>
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field">
+        <label>Stream Key <span class="tag tag-optional">optional</span></label>
+        <input type="text" id="saweriaKey" placeholder="e.g. 9c21dbd5c0228152a39428076793dd04" />
+        <span class="hint">
+          Found in your Saweria alert URL:<br>
+          <code>saweria.co/widgets/alert?streamKey=<strong>THIS_PART_HERE</strong></code>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRAKTEER -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-icon">☕</div>
+      <div>
+        <div class="section-title">Trakteer</div>
+        <div class="section-desc">Leave blank if you don't use Trakteer</div>
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field">
+        <label>Webhook Secret <span class="tag tag-optional">optional</span></label>
+        <input type="text" id="trakteerSecret" placeholder="Paste secret here..." />
+        <span class="hint">Trakteer dashboard → <strong style="color:var(--text)">Pengaturan</strong> → <strong style="color:var(--text)">Webhook</strong> → copy the secret key.</span>
+      </div>
+      <div class="notice">
+        <span class="notice-icon">⏳</span>
+        <span>Trakteer integration is coming in the next update. You can fill this in now and it'll be ready when support is added.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <span class="footer-note">Your keys are never sent anywhere —<br>everything stays in your browser.</span>
+    <button class="btn primary" onclick="generate()">Generate .env ↓</button>
+  </div>
+
+</div>
+
+<!-- RESULT -->
+<div class="result" id="result">
+
+  <div class="result-header">.env file ready</div>
+
+  <div class="preview-box" id="preview"></div>
+
+  <button class="dl-btn" onclick="download()">⬇ Download env.zip</button>
+
+  <div class="next-steps">
+    <div class="next-steps-title">What to do next</div>
+    <div class="next-step">
+      <span class="ns-num">01</span>
+      <span>Extract the downloaded <strong>env.zip</strong> and place the <strong>.env</strong> file inside into your project folder — the same folder as <strong>package.json</strong>. Replace any existing .env file.</span>
+    </div>
+    <div class="next-step">
+      <span class="ns-num">02</span>
+      <span>Double-click <strong>start.bat</strong> to launch the app. Use <strong>start-quick.bat</strong> if you don't have a permanent domain set up.</span>
+    </div>
+    <div class="next-step">
+      <span class="ns-num">03</span>
+      <span>Open <strong>http://localhost:3000</strong> in your browser. Go to <strong>Settings</strong> to set up your donation rules and timer duration.</span>
+    </div>
+    <div class="next-step">
+      <span class="ns-num">04</span>
+      <span>Add <strong>http://localhost:3000/overlay</strong> as a Browser Source in OBS. Customize the look in the <strong>Overlay Settings</strong> tab.</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let envContent = '';
+
+function generate() {
+  const port           = (document.getElementById('port').value           || '3000').trim();
+  const currency       = (document.getElementById('currency').value       || 'IDR').trim();
+  const exchangeKey    = (document.getElementById('exchangeKey').value    || '').trim();
+  const sociabuzzToken = (document.getElementById('sociabuzzToken').value || '').trim();
+  const saweriaKey     = (document.getElementById('saweriaKey').value     || '').trim();
+  const trakteerSecret = (document.getElementById('trakteerSecret').value || '').trim();
+
+  if (!port) { alert('Please enter a port number.'); return; }
+
+  envContent = [
+    `PORT=${port}`,
+    `BASE_CURRENCY=${currency}`,
+    `EXCHANGERATE_API_KEY=${exchangeKey}`,
+    `SOCIABUZZ_TOKEN=${sociabuzzToken}`,
+    `SAWERIA_STREAM_KEY=${saweriaKey}`,
+    `TRAKTEER_SECRET=${trakteerSecret}`,
+  ].join('\n');
+
+  function mask(v) {
+    if (!v) return '<span class="empty">not set</span>';
+    if (v.length <= 6) return '*'.repeat(v.length);
+    return v.slice(0, 3) + '•'.repeat(Math.min(v.length - 5, 12)) + v.slice(-2);
+  }
+
+  const lines = [
+    ['PORT',                port],
+    ['BASE_CURRENCY',       currency],
+    ['EXCHANGERATE_API_KEY',exchangeKey],
+    ['SOCIABUZZ_TOKEN',     sociabuzzToken],
+    ['SAWERIA_STREAM_KEY',  saweriaKey],
+    ['TRAKTEER_SECRET',     trakteerSecret],
+  ];
+
+  document.getElementById('preview').innerHTML = lines
+    .map(([k, v]) => `<span class="k">${k}</span>=<span class="v">${mask(v)}</span>`)
+    .join('\n');
+
+  const result = document.getElementById('result');
+  result.classList.add('show');
+  result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function download() {
+  const zip  = new JSZip();
+  zip.file('.env', envContent);
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'env.zip';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>

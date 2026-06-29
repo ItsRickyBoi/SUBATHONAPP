@@ -1,0 +1,23 @@
+{
+  "name": "donathon-timer",
+  "version": "1.0.0",
+  "description": "Self-hosted donation-powered countdown timer with donation integration for Indonesian streamers",
+  "main": "server/index.js",
+  "scripts": {
+    "start":        "node server/index.js",
+    "dev":          "nodemon server/index.js",
+    "tunnel":       "cloudflared tunnel --config tunnel/config.yml run",
+    "tunnel:quick": "cloudflared tunnel --url http://localhost:3000",
+    "stream":       "concurrently \"npm run start\" \"npm run tunnel\"",
+    "stream:quick": "concurrently \"npm run start\" \"npm run tunnel:quick\""
+  },
+  "dependencies": {
+    "dotenv":    "^16.4.5",
+    "express":   "^4.19.2",
+    "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "nodemon":      "^3.1.4"
+  }
+}
