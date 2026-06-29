@@ -1,6 +1,8 @@
 # ⏱ Donathon Timer
 
-A self-hosted donation-powered countdown timer with real-time integration and OBS overlay support — built for Indonesian streamers on **Sociabuzz**, **Trakteer**, and **Saweria**. Runs entirely on your own PC, no paid hosting needed.
+A self-hosted, donation-powered countdown timer with real-time integration and OBS overlay support—built for streamers on **Sociabuzz**, **Trakteer**, **Saweria**, and more coming soon.
+
+Runs entirely on your own PC with no paid hosting required. Optionally use a custom domain for a stable URL, so you won't need to update your configuration when your Cloudflare Tunnel URL changes.
 
 ---
 
@@ -16,9 +18,10 @@ donathon-timer/
 │   ├── index.js              # Express + Socket.IO server
 │   ├── currency.js           # Exchange rate cache + conversion (ExchangeRate-API)
 │   └── webhooks/
-│       ├── sociabuzz.js      # ✅ Sociabuzz webhook handler
-│       ├── saweria.js        # ✅ Saweria webhook handler
-│       └── trakteer.js       # ✅ Trakteer webhook handler
+│       ├── sociabuzz.js      # Sociabuzz webhook handler
+│       ├── saweria.js        # Saweria webhook handler
+│       └── trakteer.js       # Trakteer webhook handler
+│       └── more integration to come
 ├── overlay/
 │   └── index.html            # OBS browser source overlay
 ├── tunnel/
