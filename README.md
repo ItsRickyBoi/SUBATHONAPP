@@ -152,7 +152,7 @@ npm run stream:quick
 
 Webhook URLs (update each stream):
 ```
-https://random-name.trycloudflare.com/webhook/sociabuzz
+https://random-name.trycloudflare.com/webhook/sociabuzz?token=
 https://random-name.trycloudflare.com/webhook/saweria
 https://random-name.trycloudflare.com/webhook/trakteer
 ```
@@ -169,7 +169,7 @@ npm run stream
 
 Webhook URLs (permanent):
 ```
-https://subathon.yourdomain.com/webhook/sociabuzz
+https://subathon.yourdomain.com/webhook/sociabuzz?token=
 https://subathon.yourdomain.com/webhook/saweria
 https://subathon.yourdomain.com/webhook/trakteer
 ```
@@ -185,7 +185,7 @@ Follow **`CLOUDFLARE_SETUP.md`** for one-time setup with your registrar.
 **Auth method:** Bearer token in `Authorization` header.
 
 1. Sociabuzz dashboard → **Integrasi** → **Webhook**
-2. **Webhook URL**: `https://yourdomain.com/webhook/sociabuzz`
+2. **Webhook URL**: `https://yourdomain.com/webhook/sociabuzz?token=`
 3. Copy **Webhook Token** → `.env` → `SOCIABUZZ_TOKEN=`
 4. Restart server → click **Webhook HTTP Test**
 
