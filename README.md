@@ -1,8 +1,6 @@
 # ⏱ Donathon Timer
 
-A self-hosted, donation-powered countdown timer with real-time integration and OBS overlay support—built for streamers on **Sociabuzz**, **Trakteer**, **Saweria**, and more coming soon.
-
-Runs entirely on your own PC with no paid hosting required. Optionally use a custom domain for a stable URL, so you won't need to update your configuration when your Cloudflare Tunnel URL changes.
+A self-hosted donation-powered countdown timer with real-time integration and OBS overlay support. Works with streamer on any platform — supports **Sociabuzz**, **Saweria**, **Trakteer**, and **Ko-fi** out of the box.
 
 ---
 
@@ -18,15 +16,15 @@ donathon-timer/
 │   ├── index.js              # Express + Socket.IO server
 │   ├── currency.js           # Exchange rate cache + conversion (ExchangeRate-API)
 │   └── webhooks/
-│       ├── sociabuzz.js      # Sociabuzz webhook handler
-│       ├── saweria.js        # Saweria webhook handler
-│       └── trakteer.js       # Trakteer webhook handler
-│       └── more integration to come
+│       ├── sociabuzz.js      # Sociabuzz
+│       ├── saweria.js        # Saweria
+│       ├── trakteer.js       # Trakteer
+│       └── kofi.js           # Ko-fi
 ├── overlay/
 │   └── index.html            # OBS browser source overlay
 ├── tunnel/
 │   ├── config.yml            # Cloudflare Tunnel config (fill in your tunnel ID)
-│   └── config-example.yml    # Reference copy — do not edit
+│   └── config-example.yml    # Reference — do not edit
 │
 ├── state.json                # Auto-generated — timer state, do not edit
 ├── settings.json             # Auto-generated — donation rules from UI
@@ -50,8 +48,8 @@ donathon-timer/
 | Real-time | Socket.IO |
 | State persistence | `state.json` — written every second |
 | Settings persistence | `settings.json` — written on Save |
-| Donation history | `donations.json` — persistent, survives refresh |
-| Donation platforms | Sociabuzz · Saweria · Trakteer |
+| Donation history | `donations.json` — persistent, capped at 500 entries |
+| Donation platforms | Sociabuzz · Saweria · Trakteer · Ko-fi |
 | Currency conversion | ExchangeRate-API (hourly cache) |
 | Public tunnel | Cloudflare Tunnel (`cloudflared`) |
 | OBS | Browser Source → `http://localhost:3000/overlay` |
@@ -64,11 +62,7 @@ donathon-timer/
 
 Download **LTS** from https://nodejs.org and run the installer with all defaults.
 
-Verify:
-```
-node --version
-```
-You should see `v20.x.x` or higher.
+Verify: `node --version` → should show `v20.x.x` or higher.
 
 ---
 
@@ -78,10 +72,7 @@ Download the Windows installer from:
 ```
 https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
 ```
-Run with all defaults. Verify:
-```
-cloudflared --version
-```
+Run with all defaults. Verify: `cloudflared --version`
 
 ---
 
@@ -100,211 +91,187 @@ Open **`setup.html`** in any browser — just double-click it, no server needed.
 
 Fill in your platform keys, click **Generate .env**, download the zip, extract it, and place the `.env` file in your project folder.
 
-What goes in `.env`:
-
 | Key | Where to find it |
 |---|---|
 | `PORT` | Leave as `3000` |
-| `BASE_CURRENCY` | `IDR`, `USD`, or `MYR` |
-| `SOCIABUZZ_TOKEN` | Sociabuzz dashboard → Integrasi → Webhook |
+| `BASE_CURRENCY` | Your currency (USD, IDR, EUR, etc.) |
+| `EXCHANGERATE_API_KEY` | https://www.exchangerate-api.com (free) |
+| `SOCIABUZZ_TOKEN` | Sociabuzz → Integrasi → Webhook |
 | `SAWERIA_STREAM_KEY` | Your Saweria alert URL: `?streamKey=...` |
-| `TRAKTEER_SECRET` | Trakteer dashboard → Integrasi → Webhook |
-| `EXCHANGERATE_API_KEY` | https://www.exchangerate-api.com (free tier) |
+| `TRAKTEER_SECRET` | Trakteer → Integrasi → Webhook |
+| `KOFI_TOKEN` | Ko-fi → More → API → Webhooks → Verification Token |
 
 ---
 
 ### 5 — Configure your settings
 
-1. Open Command Prompt in the project folder and run `npm start`
-2. Open **http://localhost:3000** in your browser
+1. Run `npm start` in the project folder
+2. Open **http://localhost:3000**
 3. Go to the **Settings** tab
 4. Set starting timer duration, base currency, and donation rules
 5. Click **Save settings**
 
-This writes `settings.json` to disk. Rules survive restarts and power cuts.
-
-> **Do this before testing webhooks.** If `settings.json` doesn't exist yet, the server falls back to built-in defaults which may not match what you want.
+> **Do this before testing webhooks.** Without `settings.json`, the server falls back to built-in defaults.
 
 ---
 
 ### 6 — Add OBS Browser Source
 
-1. Open OBS → your scene → **+** under Sources → **Browser**
+1. OBS → your scene → **+** → **Browser**
 2. URL: `http://localhost:3000/overlay`
 3. Width: `500` · Height: `160`
 4. Check **"Shutdown source when not visible"**
 5. Check **"Refresh browser when scene becomes active"**
 
-> **Customize the overlay:** Go to the **Overlay Settings** tab → adjust fonts, colors, sizes, glow, background → click **Save overlay** → **Copy URL** → paste that URL into OBS. All settings are baked into the URL.
+> **Customize:** Go to **Overlay Settings** tab → adjust fonts, colors, sizes, background → **Save overlay** → **Copy URL** → paste into OBS.
 
-> **OBS on a different PC?** Use the server machine's local IP instead of `localhost`: `http://192.168.1.X:3000/overlay`. Run `ipconfig` on the server machine to find its IP.
+> **OBS on a different PC?** Use `http://192.168.1.X:3000/overlay` (run `ipconfig` to find the server's local IP).
 
 ---
 
 ## 🌐 Cloudflare Tunnel
 
-The tunnel gives donation platforms a public HTTPS URL to send webhooks to. See **`CLOUDFLARE_SETUP.md`** for the full step-by-step guide.
+Gives donation platforms a public HTTPS URL to reach your server. See **`CLOUDFLARE_SETUP.md`** for the full walkthrough.
 
 ### Option A — No domain (random URL)
 
-Free, no domain needed. URL changes every restart — update webhook URLs in each platform before every stream.
+Free, no domain needed. URL changes every restart — update webhook URLs in each platform before each stream.
 
 ```bash
 npm run stream:quick
 ```
 
-Webhook URLs (update each stream):
-```
-https://random-name.trycloudflare.com/webhook/sociabuzz?token=
-https://random-name.trycloudflare.com/webhook/saweria
-https://random-name.trycloudflare.com/webhook/trakteer
-```
+### Option B — With your own domain ✅ Recommended
 
----
-
-### Option B — With your own domain (permanent URL) ✅ Recommended
-
-Set webhook URLs once, never touch them again. A `.my.id` domain costs around Rp 30,000–50,000/year.
+Permanent URL — set webhook URLs once, never touch them again.
 
 ```bash
 npm run stream
 ```
 
-Webhook URLs (permanent):
+Your webhook URLs will be:
 ```
-https://subathon.yourdomain.com/webhook/sociabuzz?token=
+https://subathon.yourdomain.com/webhook/sociabuzz
 https://subathon.yourdomain.com/webhook/saweria
 https://subathon.yourdomain.com/webhook/trakteer
+https://subathon.yourdomain.com/webhook/kofi
 ```
-
-Follow **`CLOUDFLARE_SETUP.md`** for one-time setup with your registrar.
 
 ---
 
 ## 💰 Donation platform setup
 
 ### Sociabuzz ✅
+**Auth:** Bearer token in `Authorization` header.
 
-**Auth method:** Bearer token in `Authorization` header.
-
-1. Sociabuzz dashboard → **Integrasi** → **Webhook**
-2. **Webhook URL**: `https://yourdomain.com/webhook/sociabuzz?token=`
-3. Copy **Webhook Token** → `.env` → `SOCIABUZZ_TOKEN=`
+1. Sociabuzz → **Integrasi** → **Webhook**
+2. Webhook URL: `https://yourdomain.com/webhook/sociabuzz`
+3. Copy Webhook Token → `.env` → `SOCIABUZZ_TOKEN=`
 4. Restart server → click **Webhook HTTP Test**
-
-Terminal should show:
-```
-[sociabuzz] donation from Jessica — IDR 10.000
-[donation] sociabuzz | Jessica | IDR 10000 | total +Xs
-```
 
 ---
 
 ### Saweria ✅
+**Auth:** HMAC-SHA256 signature. Stream Key is in your alert URL: `?streamKey=YOUR_KEY`
 
-**Auth method:** HMAC-SHA256 signature using your Stream Key.
-
-The signature is computed from: `version + id + amount_raw + donator_name + donator_email`
-
-**Where to find your Stream Key:** it's in your Saweria alert URL:
-```
-saweria.co/widgets/alert?streamKey=YOUR_KEY_HERE
-```
-
-1. Copy Stream Key from alert URL → `.env` → `SAWERIA_STREAM_KEY=`
-2. Saweria dashboard → **Integrasi** → **HTTP Webhook**
-3. **Webhook URL**: `https://yourdomain.com/webhook/saweria`
+1. Copy Stream Key → `.env` → `SAWERIA_STREAM_KEY=`
+2. Saweria → **Integrasi** → **HTTP Webhook**
+3. Webhook URL: `https://yourdomain.com/webhook/saweria`
 4. Restart server → click **Munculkan Notifikasi**
-
-Terminal should show:
-```
-[saweria] donation from Someguy — IDR 69.420
-[donation] saweria | Someguy | IDR 69420 | total +Xs
-```
 
 ---
 
 ### Trakteer ✅
+**Auth:** Token in `X-Webhook-Token` header. Plain URL, no token in the URL itself.
 
-**Auth method:** Token in `X-Webhook-Token` header.
+1. Trakteer → **Integrasi** → **Webhook**
+2. Webhook URL: `https://yourdomain.com/webhook/trakteer`
+3. Copy token → `.env` → `TRAKTEER_SECRET=`
+4. Restart server → toggle webhook on → click **Send Webhook Test**
 
-1. Trakteer dashboard → **Integrasi** → **Webhook**
-2. **Webhook URL**: `https://yourdomain.com/webhook/trakteer`
-3. Copy the token shown → `.env` → `TRAKTEER_SECRET=`
-4. Toggle webhook **on** → restart server → click **Send Webhook Test**
+> Trakteer's test payload contains JS-style comments — the handler strips them automatically. Real donations are fine.
+> Trakteer disables your webhook after 3 failed deliveries — always have the server running before testing.
 
-Terminal should show:
-```
-[trakteer] donation from Egis — IDR 5.000 (1× Kopi @ IDR 5000)
-[donation] trakteer | Egis | IDR 5000 | total +Xs
-```
+---
 
-> **Note:** Trakteer's test button sends a payload with JS-style comments which makes it invalid JSON. The handler strips these automatically so the test works. Real donations don't have this issue.
+### Ko-fi ✅
+**Auth:** Verification token embedded inside the payload itself (not a header).
 
-> **Important:** Trakteer retries failed webhooks 3 times, then **automatically disables** your webhook. Always make sure your server is running before testing.
+Ko-fi sends donations as `application/x-www-form-urlencoded` — different from the others.
+The actual data is a JSON string in a field called `data`.
+
+1. Ko-fi → **More** → **API** → **Webhooks**
+2. Copy your **Verification Token** → `.env` → `KOFI_TOKEN=`
+3. Webhook URL: `https://yourdomain.com/webhook/kofi`
+4. Click **Send Test** to verify
+
+> Ko-fi sends amounts in USD by default. If your base currency is different, the currency conversion module will convert it automatically (requires `EXCHANGERATE_API_KEY`).
 
 ---
 
 ## 💱 Currency conversion
 
-When a donation arrives in a currency different from your `BASE_CURRENCY`, the server automatically converts it before applying your donation rules.
+When a donation arrives in a currency different from your `BASE_CURRENCY`, the server converts it automatically before applying your rules.
 
-**Setup:** Add your free API key from https://www.exchangerate-api.com to `.env`:
+Get a free API key at https://www.exchangerate-api.com → add to `.env`:
 ```
 EXCHANGERATE_API_KEY=your_key_here
 ```
 
-Rates are fetched once on server start and cached for 1 hour. If the key is missing, the server falls back to the raw donation amount and logs a warning.
-
-The donation log shows both the original amount and the converted amount (e.g. `USD 5 → ≈ IDR 89,545`). You can customize the appearance of the converted amount — size, color, and visibility — in the **Settings** tab under **Donation log appearance**.
+Rates are fetched on server start and cached for 1 hour. If the key is missing, the server falls back to the raw amount and logs a warning. You can check current cached rates at `http://localhost:3000/api/rates`.
 
 ---
 
 ## 🧮 How donation rules work
 
-Configure in the **Settings** tab → saved to `settings.json`.
+Configure in **Settings** tab → saved to `settings.json`.
 
 Tiered calculation: walks rules highest → lowest, takes full multiples at each tier, passes remainder down.
 
 **Example rules:**
 ```
-IDR  5,000 = +1 minute
-IDR 10,000 = +2 minutes
-IDR 50,000 = +10 minutes
+USD  5.00 = +1 minute
+USD 10.00 = +2 minutes
+USD 50.00 = +10 minutes
 ```
 
 | Donation | Calculation | Time added |
 |---|---|---|
-| IDR 10,000 | 10k × 1 | **+2 min** |
-| IDR 50,000 | 50k × 1 | **+10 min** |
-| IDR 60,000 | 50k × 1, then 10k × 1 | **+12 min** |
-| IDR 35,000 | 10k × 3, then 5k × 1 | **+7 min** |
-| IDR 7,000 | 5k × 1, rem 2k ignored | **+1 min** |
-| IDR 4,000 | Below all thresholds | **+0** |
-
----
-
-## 📋 Donation log
-
-The donation log persists across page refreshes — it's saved to `donations.json` on the server and loaded automatically when you open the control UI. The log keeps the last 500 donations; older entries are trimmed automatically.
-
-Each entry shows: platform badge, donor name, original amount, converted amount (if applicable), time added, and timestamp.
-
-All appearance options — font sizes, colors, row spacing, log height, and which fields to show — are configurable in the **Settings** tab under **Donation log appearance**.
+| USD 10 | 10 × 1 | **+2 min** |
+| USD 60 | 50 × 1, then 10 × 1 | **+12 min** |
+| USD 7 | 5 × 1, rem 2 ignored | **+1 min** |
+| USD 3 | Below threshold | **+0** |
 
 ---
 
 ## ⚡ Power cut / crash recovery
 
-`state.json` is written every second while running, and immediately on every pause, reset, and donation received.
-
-On restart after a power cut:
+`state.json` is written every second. On restart:
 ```
 ↺  Restored state — 4521s remaining (was RUNNING)
 ⚡  Power-cut drift: -47s applied
 ```
+Timer always restores as **PAUSED**. On clean Ctrl+C, state is saved with zero drift.
 
-Timer always restores as **PAUSED** — click Start when ready. On a clean Ctrl+C shutdown, exact state is saved with zero drift.
+---
+
+## 🧪 Testing currency conversion
+
+Use the built-in test endpoint — no real donation needed:
+
+**Browser console** (open http://localhost:3000 first):
+```js
+fetch('/api/test/donation', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ name: 'Test', amount: 5, currency: 'USD', platform: 'test' })
+}).then(r => r.json()).then(console.log)
+```
+
+**PowerShell:**
+```powershell
+Invoke-WebRequest -Uri "http://localhost:3000/api/test/donation" -Method POST -ContentType "application/json" -Body '{"name":"Test","amount":5,"currency":"USD","platform":"test"}'
+```
 
 ---
 
@@ -336,7 +303,7 @@ Timer always restores as **PAUSED** — click Start when ready. On a clean Ctrl+
 - [x] Server-side timer state (survives browser close)
 - [x] `state.json` — written every second, power-cut safe
 - [x] `settings.json` — written on Save, rules survive restarts
-- [x] `donations.json` — persistent donation history, loaded on page open
+- [x] `donations.json` — persistent history, loaded on page open
 - [x] Graceful shutdown on Ctrl+C
 - [x] Settings sync endpoint (`POST /api/settings`)
 
@@ -361,32 +328,51 @@ Timer always restores as **PAUSED** — click Start when ready. On a clean Ctrl+
 ### Phase 6 — Saweria ✅
 - [x] HMAC-SHA256 signature verification
 - [x] Signing: `HMAC(streamKey, version+id+amount_raw+donator_name+donator_email)`
-- [x] Stream Key from alert URL
 
 ### Phase 7 — Trakteer ✅
 - [x] `X-Webhook-Token` header verification
 - [x] Comment stripping for test payload compatibility
-- [x] `price × quantity` for correct total calculation
-- [x] Always returns 200 to prevent auto-disable
+- [x] `price × quantity` for correct total
 
-### Phase 8 — Setup experience ✅
-- [x] `setup.html` — browser-based .env generator, no server needed
+### Phase 8 — Ko-fi ✅
+- [x] `application/x-www-form-urlencoded` body parsing (different from other platforms)
+- [x] JSON string in `data` field parsed correctly
+- [x] Verification token matched from inside the payload
+- [x] `amount` parsed from string to number
+- [x] Supports both `Donation` and `Subscription` types
 
 ### Phase 9 — Currency conversion ✅
 - [x] ExchangeRate-API integration (`server/currency.js`)
-- [x] Hourly rate cache, pre-warmed on server start
-- [x] Converts incoming currency to base currency before rule matching
-- [x] Falls back to raw amount if API key missing or request fails
-- [x] `/api/rates` endpoint exposes current cached rates
+- [x] Hourly cache, pre-warmed on server start
+- [x] Converts to base currency before rule matching
+- [x] Graceful fallback if API key missing or request fails
+- [x] `/api/rates` endpoint for cache inspection
+- [x] `/api/test/donation` endpoint for local testing
 
-### Phase 10 — Donation log persistence ✅
-- [x] `donations.json` written on every donation (capped at 500 entries)
-- [x] History loaded via `GET /api/donations` on page open
-- [x] Converted amount shown alongside original in log
-- [x] Converted amount appearance (size, color, visibility) configurable in Settings
+### Phase 10 — Setup experience ✅
+- [x] `setup.html` — browser-based .env generator, no server needed
+- [x] Supports all 4 platforms + currency key
+- [x] Downloads as `.env` inside a zip (avoids browser filename restrictions)
 
 ---
 
+## Prompt context (for AI-assisted development)
+
+> Self-hosted donation-powered countdown timer for streamers. Node.js + Express +
+> Socket.IO on Windows PC. Timer state in state.json (written every second,
+> drift-corrected on restart). Rules in settings.json (synced from UI via
+> POST /api/settings). UI in public/, OBS overlay in overlay/ — both via Socket.IO.
+> Overlay customizable via 30+ Google Fonts and URL params.
+> Exposed via Cloudflare Tunnel — Option A (random) or Option B (permanent domain).
+> Platforms: Sociabuzz (Bearer token), Saweria (HMAC-SHA256, stream key from alert URL),
+> Trakteer (X-Webhook-Token, strips JS comments from test payload, price×quantity),
+> Ko-fi (urlencoded body, JSON in "data" field, token inside payload, amount is string).
+> Currency conversion via ExchangeRate-API (server/currency.js, hourly cache).
+> handleDonation() is async (handles conversion), calls sync processDonation() for rule
+> matching. Tiered calc: walk rules highest to lowest, full multiples, remainder cascades.
+> Test endpoint: POST /api/test/donation for simulating foreign currency donations.
+
+---
 
 ## License
 
