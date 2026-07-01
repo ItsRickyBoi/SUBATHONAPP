@@ -356,24 +356,6 @@ Invoke-WebRequest -Uri "http://localhost:3000/api/test/donation" -Method POST -C
 
 ---
 
-## Prompt context (for AI-assisted development)
-
-> Self-hosted donation-powered countdown timer for streamers. Node.js + Express +
-> Socket.IO on Windows PC. Timer state in state.json (written every second,
-> drift-corrected on restart). Rules in settings.json (synced from UI via
-> POST /api/settings). UI in public/, OBS overlay in overlay/ — both via Socket.IO.
-> Overlay customizable via 30+ Google Fonts and URL params.
-> Exposed via Cloudflare Tunnel — Option A (random) or Option B (permanent domain).
-> Platforms: Sociabuzz (Bearer token), Saweria (HMAC-SHA256, stream key from alert URL),
-> Trakteer (X-Webhook-Token, strips JS comments from test payload, price×quantity),
-> Ko-fi (urlencoded body, JSON in "data" field, token inside payload, amount is string).
-> Currency conversion via ExchangeRate-API (server/currency.js, hourly cache).
-> handleDonation() is async (handles conversion), calls sync processDonation() for rule
-> matching. Tiered calc: walk rules highest to lowest, full multiples, remainder cascades.
-> Test endpoint: POST /api/test/donation for simulating foreign currency donations.
-
----
-
 ## License
 
 MIT
