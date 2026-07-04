@@ -11,6 +11,7 @@ const { Server }   = require('socket.io');
 const sociabuzz    = require('./webhooks/sociabuzz');
 const saweria      = require('./webhooks/saweria');
 const trakteer     = require('./webhooks/trakteer');
+const kofi         = require('./webhooks/kofi');
 const currency     = require('./currency');
 require('dotenv').config();
 
@@ -77,6 +78,12 @@ app.post('/webhook/saweria', saweria(handleDonation));
 
 // Trakteer — X-Webhook-Token header verification
 app.post('/webhook/trakteer', trakteer(handleDonation));
+
+// Ko-fi sends application/x-www-form-urlencoded — urlencoded middleware on this route only
+app.post('/webhook/kofi',
+  express.urlencoded({ extended: true }),
+  kofi(handleDonation)
+);
 
 // Serve main control UI
 app.get('/', (req, res) => {
@@ -195,20 +202,20 @@ function processDonation(donation) {
   console.log(`[donation] matching against ${normalizedRules.length} rule(s):`,
     normalizedRules.map(r => `${r.currency} ${r.amount} -> +${r.addSecs}s`).join(', ') || '(none)');
 
-  let remaining = amount;
+  // Find the best matching rule — highest rule whose amount is <= donation.
+  // Then apply its rate (secs per unit) proportionally to the full donation.
+  // e.g. rule: IDR 50,000 = 600s → rate = 600/50000 = 0.012 s/IDR
+  //      donation IDR 60,000 → 60000 × 0.012 = 720s = 12 minutes (floored)
+  const matchingRule = normalizedRules.find(r => amount >= r.amount);
+
   let addedSecs = 0;
 
-  for (const rule of normalizedRules) {
-    if (remaining <= 0) break;
-    if (remaining < rule.amount) continue;
-    const times = Math.floor(remaining / rule.amount);
-    addedSecs  += rule.addSecs * times;
-    remaining  -= rule.amount * times;
-    console.log(`[donation]   rule ${rule.currency} ${rule.amount} × ${times} = +${rule.addSecs * times}s  (rem: ${remaining})`);
-  }
-
-  if (addedSecs === 0) {
-    console.log(`[donation] no time added — ${cur} ${amount} is below the minimum rule threshold`);
+  if (!matchingRule) {
+    console.log(`[donation] no time added — ${cur} ${amount} is below the minimum rule threshold (lowest: ${normalizedRules.length ? normalizedRules[normalizedRules.length - 1].amount : 'n/a'})`);
+  } else {
+    const ratePerUnit = matchingRule.addSecs / matchingRule.amount;
+    addedSecs = Math.floor(amount * ratePerUnit);
+    console.log(`[donation]   rule ${matchingRule.currency} ${matchingRule.amount} → rate ${ratePerUnit.toFixed(6)} s/unit × ${amount} = +${addedSecs}s`);
   }
 
   const displayCurrency = originalCurrency || cur;
@@ -412,6 +419,7 @@ server.listen(PORT, () => {
   console.log(`  →  Sociabuzz   : POST /webhook/sociabuzz`);
   console.log(`  →  Saweria     : POST /webhook/saweria`);
   console.log(`  →  Trakteer    : POST /webhook/trakteer`);
+  console.log(`  →  Ko-fi       : POST /webhook/kofi`);
   console.log(`  →  State file  : ${STATE_FILE}`);
   console.log('');
 
