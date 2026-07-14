@@ -85,14 +85,7 @@ app.post('/webhook/kofi',
   kofi(handleDonation)
 );
 
-// Serve main control UI
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
-});
-app.use('/', express.static(path.join(__dirname, '..', 'public')));
 
-// Serve OBS overlay
-app.use('/overlay', express.static(path.join(__dirname, '..', 'overlay')));
 
 // ── STATE PERSISTENCE ─────────────────────────────────────────────────────────
 function loadStateFromDisk() {
@@ -202,16 +195,13 @@ function processDonation(donation) {
   console.log(`[donation] matching against ${normalizedRules.length} rule(s):`,
     normalizedRules.map(r => `${r.currency} ${r.amount} -> +${r.addSecs}s`).join(', ') || '(none)');
 
-  // Find the best matching rule — highest rule whose amount is <= donation.
-  // Then apply its rate (secs per unit) proportionally to the full donation.
-  // e.g. rule: IDR 50,000 = 600s → rate = 600/50000 = 0.012 s/IDR
-  //      donation IDR 60,000 → 60000 × 0.012 = 720s = 12 minutes (floored)
-  const matchingRule = normalizedRules.find(r => amount >= r.amount);
+  const matchingRule = normalizedRules.find(r => amount >= r.amount)
+    || normalizedRules[normalizedRules.length - 1]; // fallback: lowest rule
 
   let addedSecs = 0;
 
   if (!matchingRule) {
-    console.log(`[donation] no time added — ${cur} ${amount} is below the minimum rule threshold (lowest: ${normalizedRules.length ? normalizedRules[normalizedRules.length - 1].amount : 'n/a'})`);
+    console.log(`[donation] no time added — no rules configured for ${cur}`);
   } else {
     const ratePerUnit = matchingRule.addSecs / matchingRule.amount;
     addedSecs = Math.floor(amount * ratePerUnit);
@@ -362,9 +352,6 @@ app.post('/api/timer/add', (req, res) => {
   res.json(timerState);
 });
 
-// ── REST ENDPOINTS — SETTINGS SYNC ───────────────────────────────────────────
-// The browser UI saves settings to localStorage, but the server needs the rules
-// for donation processing. This endpoint lets the UI push rules to the server.
 
 app.post('/api/settings', (req, res) => {
   try {
@@ -379,6 +366,13 @@ app.post('/api/settings', (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// ── STATIC FILES — registered last so /api/* routes are never swallowed ───────
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+});
+app.use('/', express.static(path.join(__dirname, '..', 'public')));
+app.use('/overlay', express.static(path.join(__dirname, '..', 'overlay')));
 
 // ── SOCKET.IO ─────────────────────────────────────────────────────────────────
 io.on('connection', (socket) => {
@@ -423,7 +417,6 @@ server.listen(PORT, () => {
   console.log(`  →  State file  : ${STATE_FILE}`);
   console.log('');
 
-  // Pre-warm exchange rate cache — runs after server is up
   const baseCurrency = (loadSettings().currency || process.env.BASE_CURRENCY || 'IDR').toUpperCase();
   if (process.env.EXCHANGERATE_API_KEY) {
     currency.prewarm(baseCurrency);
